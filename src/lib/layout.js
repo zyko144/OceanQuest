@@ -19,8 +19,8 @@ const roles = [
   // Direction & équipage
   { key: 'founder', name: '🔱 Poséidon', color: 0x00e5ff, hoist: true, permissions: [P.Administrator], about: 'Fondateur du jeu' },
   { key: 'admin', name: '🌊 Amiral', color: 0x0091ea, hoist: true, permissions: [P.Administrator], about: 'Administrateur' },
-  { key: 'manager', name: '⚓ Capitaine', color: 0x1565c0, hoist: true, permissions: TICKET_MOD_PERMS, about: 'Modérateur des tickets' },
   { key: 'moderator', name: '🧭 Quartier-Maître', color: 0x26a69a, hoist: true, permissions: MODERATOR_PERMS, about: 'Modérateur' },
+  { key: 'manager', name: '⚓ Capitaine', color: 0x1565c0, hoist: true, permissions: TICKET_MOD_PERMS, about: 'Modérateur des tickets' },
   { key: 'helper', name: '🛟 Garde-Côte', color: 0x4dd0e1, hoist: true, permissions: HELPER_PERMS, about: 'Support / helper' },
   { key: 'dev', name: '🛠️ Charpentier de Marine', color: 0x8d6e63, hoist: true, permissions: [], about: 'Développeur du jeu' },
   { key: 'builder', name: '🗺️ Cartographe', color: 0xa1887f, hoist: false, permissions: [], about: 'Builder / designer' },

@@ -25,6 +25,7 @@ function guidePayload(guild) {
         title: '🤖  Guide des commandes',
         description: paragraphs(
           '> Toutes les commandes commencent par **/**.\n> Tape `/` dans ce salon puis choisis la commande dans la liste 👆',
+          '🤫 **Les réponses des commandes ne sont visibles que par toi**, pour garder le salon propre.',
           '-# 🔎 Ce message est épinglé : clique sur 📌 en haut du salon pour le retrouver.',
         ),
         color: colors.ocean,

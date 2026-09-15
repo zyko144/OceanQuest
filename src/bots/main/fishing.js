@@ -1,6 +1,6 @@
 // Mini-jeu de pêche Discord : /pecher, /aquarium, /classement.
 
-const { GatewayIntentBits, SlashCommandBuilder } = require('discord.js');
+const { GatewayIntentBits, MessageFlags, SlashCommandBuilder } = require('discord.js');
 const config = require('../../config');
 const db = require('../../lib/db');
 const { findChannel } = require('../../lib/guild');
@@ -108,7 +108,7 @@ const commands = [
       }
       cooldowns.set(user.id, Date.now());
 
-      await interaction.reply({ embeds: [oceanEmbed({ description: `🎣 ${user} lance sa ligne vers **${zone.emoji} ${zone.label}**…\n〰〰〰〰〰〰 🪝`, color: colors.foam, footer: 'Ocean Quest ・ Pêche' })] });
+      await interaction.reply({ flags: MessageFlags.Ephemeral, embeds: [oceanEmbed({ description: `🎣 ${user} lance sa ligne vers **${zone.emoji} ${zone.label}**…\n〰〰〰〰〰〰 🪝`, color: colors.foam, footer: 'Ocean Quest ・ Pêche' })] });
       await sleep(1800);
 
       const result = rollCatch(zoneKey);
@@ -176,7 +176,7 @@ const commands = [
         return `${RARITIES[r].emoji} **${RARITIES[r].label}** : ${owned.length}/${species.length} ${owned.map((f) => f.emoji).join('')}`;
       });
       const best = fisher.best_catch;
-      return interaction.reply({ embeds: [oceanEmbed({
+      return interaction.reply({ flags: MessageFlags.Ephemeral, embeds: [oceanEmbed({
         title: `🐠 Aquarium de ${user.displayName ?? user.username}`,
         thumbnail: user.displayAvatarURL({ size: 256 }),
         color: colors.lagoon,
@@ -207,7 +207,7 @@ const commands = [
         lines = rows.map((r, i) => `${medals[i] ?? `**${i + 1}.**`} <@${r.user_id}> — ${type === 'coins' ? `🪙 **${r.coins}** doublons` : `🐟 **${r.catches}** prises`}`);
       }
       const titles = { levels: '🎣 Classement des niveaux', coins: '🪙 Les plus riches armateurs', catches: '🐟 Les pêcheurs les plus acharnés' };
-      return interaction.reply({ embeds: [oceanEmbed({
+      return interaction.reply({ flags: MessageFlags.Ephemeral, embeds: [oceanEmbed({
         title: titles[type],
         description: lines.length ? lines.join('\n') : 'Personne n’a encore pris la mer… sois le premier ! 🌊',
         color: colors.gold,

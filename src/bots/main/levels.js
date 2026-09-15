@@ -1,6 +1,6 @@
 // Niveaux d'XP et rangs de pêcheur (rôles lvl5 → lvl75 de layout.js).
 
-const { Events, GatewayIntentBits, SlashCommandBuilder } = require('discord.js');
+const { Events, GatewayIntentBits, MessageFlags, SlashCommandBuilder } = require('discord.js');
 const config = require('../../config');
 const db = require('../../lib/db');
 const layout = require('../../lib/layout');
@@ -83,6 +83,7 @@ const commands = [
       const currentRank = RANK_ROLES.find((r) => level >= r.level);
       const nextRank = [...RANK_ROLES].reverse().find((r) => r.level > level);
       return interaction.reply({
+        flags: MessageFlags.Ephemeral,
         embeds: [oceanEmbed({
           title: `🎣 Carnet de bord de ${user.displayName ?? user.username}`,
           thumbnail: user.displayAvatarURL({ size: 256 }),

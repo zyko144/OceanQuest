@@ -83,7 +83,7 @@ const commands = [
     async execute(interaction) {
       const guild = await interaction.guild.fetch();
       const channels = guild.channels.cache;
-      return interaction.reply({ embeds: [oceanEmbed({
+      return interaction.reply({ flags: MessageFlags.Ephemeral, embeds: [oceanEmbed({
         title: `🏝️ ${guild.name}`,
         thumbnail: guild.iconURL({ size: 256 }),
         color: colors.ocean,
@@ -105,6 +105,7 @@ const commands = [
     async execute(interaction) {
       const components = linkButtons();
       return interaction.reply({
+        flags: MessageFlags.Ephemeral,
         embeds: [oceanEmbed({
           title: '🎮 Prends la mer sur Ocean Quest !',
           description: config.game.robloxUrl
