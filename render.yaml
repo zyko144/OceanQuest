@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: oceanquest
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DISCORD_GUILD_ID
+        value: "1549380623117058061"
+      - key: TICKET_BOT_TOKEN
+        sync: false
+      - key: SECURITY_BOT_TOKEN
+        sync: false
+      - key: MAIN_BOT_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        value: https://pwuwcactpmzmguclthvj.supabase.co
+      - key: SUPABASE_KEY
+        sync: false
+      - key: PUBLIC_URL
+        value: https://oceanquest.onrender.com
+      - key: KEEP_ALIVE
+        value: "true"
+      - key: NODE_VERSION
+        value: "22"
+      - key: TZ
+        value: Europe/Paris
+      - key: ROBLOX_GAME_URL
+        sync: false
+      - key: ROBLOX_GROUP_URL
+        sync: false

@@ -1,0 +1,20 @@
+{
+  "name": "ocean-quest-discord",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bots Discord Ocean Quest : Ocean Ticket, Ocean Guard (sécurité) et Ocean Quest (communauté)",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "setup": "node src/scripts/setup.js",
+    "check": "node src/scripts/check.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2"
+  }
+}
