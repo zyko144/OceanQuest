@@ -14,8 +14,11 @@
     "panels": "node src/index.js --panels"
   },
   "dependencies": {
+    "@expo-google-fonts/fredoka": "^0.4.1",
+    "@napi-rs/canvas": "^1.0.9",
     "@supabase/supabase-js": "^2.116.0",
     "discord.js": "^14.27.0",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "gifenc": "^1.0.3"
   }
 }

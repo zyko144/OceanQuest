@@ -177,6 +177,7 @@ const categories = [
     channels: [
       text('guides', '🗺️', 'guides-et-astuces', 'community', { topic: 'Spots, appâts, cannes : partage tes astuces.' }),
       text('bestiary', '🐠', 'bestiaire', 'community', { topic: 'Tout savoir sur les poissons d’Ocean Quest.' }),
+      text('aquarium_ig', '🐡', 'aquarium-ig', 'commands', { topic: '/aquariumig : tes 3 meilleurs poissons pêchés en jeu, en aquarium animé.' }),
       text('trading', '⚖️', 'echanges', 'community', { topic: 'Échanges entre joueurs. Aucun échange contre de l’argent réel.', rateLimitPerUser: 30 }),
       text('leaderboard', '🏆', 'classements', 'announce', { topic: 'Les meilleurs pêcheurs du serveur.' }),
       text('suggestions', '💡', 'suggestions', 'suggestions', { topic: 'Utilise /suggestion pour proposer une idée.' }),

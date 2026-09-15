@@ -3,6 +3,7 @@
 const http = require('node:http');
 const config = require('./config');
 const db = require('./lib/db');
+const aquarium = require('./lib/aquariumStore');
 
 function snapshot(registry) {
   return {
@@ -31,6 +32,14 @@ main{max-width:560px;padding:32px}h1{margin:0 0 8px}ul{padding-left:18px;line-he
 
 function startWebServer(registry) {
   const server = http.createServer((req, res) => {
+    // Index envoyés par les serveurs du jeu Roblox (/aquariumig).
+    if (req.url?.startsWith('/roblox/aquarium')) {
+      aquarium.handleHttp(req, res).catch((error) => {
+        console.error('[aquarium] http', error);
+        if (!res.headersSent) res.writeHead(500).end();
+      });
+      return;
+    }
     const data = snapshot(registry);
     if (req.url?.startsWith('/health')) {
       res.writeHead(200, { 'content-type': 'application/json' });

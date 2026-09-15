@@ -29,11 +29,20 @@ Les trois bots tournent dans **un seul service Render**.
 
 ## 🧭 Commandes
 
-- **Pêche & niveaux** : `/pecher` `/aquarium` `/rang` `/classement`
+- **Pêche & niveaux** : `/pecher` `/aquarium` `/aquariumig` `/rang` `/classement`
 - **Communauté** : `/suggestion` `/jouer` `/serveur` `/aide`
 - **Tickets** : `/ticket fermer|ajouter|retirer|renommer|panneau|stats`
 - **Modération** : `/avertir` `/avertissements` `/retirer-avertissement` `/effacer-avertissements` `/sourdine` `/fin-sourdine` `/expulser` `/bannir` `/debannir` `/purge` `/verrouiller` `/deverrouiller` `/lenteur` `/confinement`
 - **Administration** : `/setup` `/annonce` `/giveaway lancer|terminer|relancer` `/suggestion-statut`
+
+## 🐡 Aquarium IG (`/aquariumig`)
+
+Le jeu Roblox envoie toutes les minutes l'index des joueurs en ligne au bot, qui en tire un GIF d'aquarium avec les 3 meilleurs poissons.
+
+- **Salon** : `#aquarium-ig`, créé au démarrage du bot s'il manque.
+- **Réception** : `POST /roblox/aquarium` avec l'en-tête `X-Ocean-Secret`. La clé vient de `AQUARIUM_SECRET`, sinon elle est créée une fois et gardée dans `guild_config` (`aquarium_ig:secret`).
+- **Corps** : `{ "joueurs": [{ "userId", "pseudo", "affichage", "especes", "totalEspeces", "poissons": [{ "nom", "rarete", "rang", "poids", "valeur", "mutation", "image", "couleur" }] }] }`. Les poissons sont classés par `rang` (rareté), puis valeur, puis poids.
+- **Côté jeu** : script serveur `AquariumDiscord` et *Game Settings → Security → Allow HTTP Requests*.
 
 ## 🛠️ Développement local
 

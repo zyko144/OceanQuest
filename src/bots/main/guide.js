@@ -52,6 +52,7 @@ function guidePayload(guild) {
         title: '🐠  Collection & classements',
         description: paragraphs(
           `### \`/aquarium\`\nTa collection : espèces trouvées (sur ${FISH.length}), nombre de prises, doublons et ta plus belle prise.\n-# 👀 Ajoute un membre pour visiter son aquarium`,
+          `### \`/aquariumig\`\nTes **3 meilleurs poissons pêchés dans le jeu Roblox**, en aquarium animé.\n-# 🐡 Dans ${channelMention(guild, 'aquarium_ig', '#aquarium-ig')} ・ la première fois : \`/aquariumig pseudo:TonPseudoRoblox\``,
           '### `/classement`\nLe top 10 du serveur. Choisis le type :\n🎣 **Niveaux**  ・  🪙 **Doublons**  ・  🐟 **Prises**',
         ),
         color: colors.gold,

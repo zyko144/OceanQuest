@@ -74,4 +74,9 @@ module.exports = {
   fishing: {
     cooldownSec: num('FISHING_COOLDOWN_SEC', 30),
   },
+
+  // Clé que le jeu Roblox envoie avec les index (/aquariumig). Vide : créée et gardée en base.
+  aquarium: {
+    secret: env('AQUARIUM_SECRET'),
+  },
 };

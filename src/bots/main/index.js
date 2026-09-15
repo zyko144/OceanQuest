@@ -3,6 +3,7 @@ module.exports = [
   require('./selfroles'),
   require('./levels'),
   require('./fishing'),
+  require('./aquariumIg'),
   require('./guide'),
   require('./suggestions'),
   require('./giveaways'),
