@@ -13,6 +13,7 @@ const isLogChannel = (guild, channelId) => ['log_tickets', 'log_security', 'log_
 
 async function onMessageDelete(message) {
   if (!message.guild || message.author?.bot || isLogChannel(message.guild, message.channelId)) return;
+  if (message.partial && !message.author) return; // message d'avant le démarrage du bot : rien d'utile à journaliser
   const files = message.attachments?.map((a) => a.name).join(', ');
   await sendLog(message.guild, 'log_messages', oceanEmbed({
     title: '🗑️ Message supprimé',

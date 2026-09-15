@@ -3,6 +3,7 @@ const config = require('../config');
 const { getMainGuild, loadStoredIds } = require('../lib/guild');
 const { safeReply } = require('../lib/util');
 const { fail } = require('../lib/embeds');
+const { syncAvatar } = require('./avatar');
 
 const PRIVILEGED = new Set([GatewayIntentBits.GuildMembers, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildPresences]);
 
@@ -33,15 +34,33 @@ function buildClient(modules, privileged) {
   });
 }
 
+const compact = (name) => String(name ?? '').toLowerCase().replace(/\s+/g, '');
+
+// Un groupe hébergé en secours (sans token ici) est désactivé si son vrai bot est déjà
+// sur le serveur : il tourne ailleurs (Render) et on éviterait les messages en double.
+async function disableHostedGroups(client, bot, guild) {
+  for (const group of bot.groups.filter((g) => !bot.ownGroups.includes(g))) {
+    const name = config.bots[group].name;
+    const found = await guild.members.search({ query: name.split(' ')[0], limit: 20 }).catch(() => null);
+    const dedicated = found?.find((m) => m.user.bot && m.id !== client.user.id && compact(m.user.username) === compact(name));
+    if (dedicated) {
+      bot.disabledGroups.add(group);
+      console.warn(`[${bot.label}] ${name} est déjà sur le serveur → modules « ${group} » désactivés ici pour éviter les doublons.`);
+    }
+  }
+}
+
 function wire(client, bot, ctx) {
   const commands = new Map();
   const components = new Map();
+  const active = (mod) => !bot.disabledGroups.has(bot.moduleGroup.get(mod));
 
   for (const mod of bot.modules) {
-    for (const command of mod.commands ?? []) commands.set(command.data.name, command);
-    for (const [prefix, handler] of Object.entries(mod.components ?? {})) components.set(prefix, handler);
+    for (const command of mod.commands ?? []) commands.set(command.data.name, { ...command, mod });
+    for (const [prefix, handler] of Object.entries(mod.components ?? {})) components.set(prefix, { handler, mod });
     for (const [event, handler] of Object.entries(mod.events ?? {})) {
       client.on(event, (...args) => {
+        if (!bot.ready || !active(mod)) return;
         const guildId = eventGuildId(args);
         if (config.guildId && guildId && guildId !== config.guildId) return;
         Promise.resolve(handler(...args, ctx)).catch((error) => console.error(`[${bot.label}:${mod.name}] ${event}`, error));
@@ -52,13 +71,15 @@ function wire(client, bot, ctx) {
   client.on(Events.InteractionCreate, async (interaction) => {
     if (config.guildId && interaction.guildId && interaction.guildId !== config.guildId) return;
     try {
-      if (interaction.isChatInputCommand()) {
-        await commands.get(interaction.commandName)?.execute(interaction, ctx);
-      } else if (interaction.isAutocomplete()) {
-        await commands.get(interaction.commandName)?.autocomplete?.(interaction, ctx);
+      if (interaction.isChatInputCommand() || interaction.isAutocomplete()) {
+        const command = commands.get(interaction.commandName);
+        if (!command || !active(command.mod)) return;
+        if (interaction.isAutocomplete()) await command.autocomplete?.(interaction, ctx);
+        else await command.execute(interaction, ctx);
       } else if (interaction.isMessageComponent() || interaction.isModalSubmit()) {
         const [prefix, ...args] = interaction.customId.split(':');
-        await components.get(prefix)?.(interaction, args, ctx);
+        const component = components.get(prefix);
+        if (component && active(component.mod)) await component.handler(interaction, args, ctx);
       }
     } catch (error) {
       console.error(`[${bot.label}] interaction ${interaction.customId ?? interaction.commandName}`, error);
@@ -86,13 +107,15 @@ function wire(client, bot, ctx) {
       return;
     }
     await loadStoredIds(guild.id);
+    await disableHostedGroups(client, bot, guild);
+    await syncAvatar(client, bot.ownGroups[0], bot.label);
 
-    const body = [...commands.values()].map((c) => c.data.toJSON());
+    const body = [...commands.values()].filter((c) => active(c.mod)).map((c) => c.data.toJSON());
     await guild.commands.set(body)
       .then(() => console.log(`[${bot.label}] ${body.length} commandes slash enregistrées`))
       .catch((e) => console.error(`[${bot.label}] enregistrement des commandes :`, e.message));
 
-    for (const mod of bot.modules) {
+    for (const mod of bot.modules.filter(active)) {
       await Promise.resolve(mod.onReady?.(client, guild, ctx)).catch((e) => console.error(`[${bot.label}:${mod.name}] onReady`, e));
     }
     bot.ready = true;

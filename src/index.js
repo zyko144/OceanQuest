@@ -25,10 +25,15 @@ function planBots() {
   }
   const bots = [...byToken.values()];
   if (!bots.length) throw new Error('Aucun token de bot : renseigne au moins TICKET_BOT_TOKEN dans .env');
+  for (const bot of bots) bot.ownGroups = [...bot.groups];
   for (const group of HOST_ORDER) {
     if (!bots.some((b) => b.groups.includes(group))) bots[0].groups.push(group);
   }
-  for (const bot of bots) bot.modules = bot.groups.flatMap((g) => GROUPS[g].modules);
+  for (const bot of bots) {
+    bot.modules = bot.groups.flatMap((g) => GROUPS[g].modules);
+    bot.moduleGroup = new Map(bot.groups.flatMap((g) => GROUPS[g].modules.map((mod) => [mod, g])));
+    bot.disabledGroups = new Set();
+  }
   return bots;
 }
 
@@ -40,6 +45,7 @@ async function refreshPanels() {
     const guild = await getMainGuild(bot.client);
     if (!guild) continue;
     for (const mod of bot.modules) {
+      if (bot.disabledGroups.has(bot.moduleGroup.get(mod))) continue;
       await Promise.resolve(mod.panels?.(bot.client, guild, bot.ctx)).catch((e) => console.error(`[${bot.label}:${mod.name}] panneaux`, e));
     }
   }
