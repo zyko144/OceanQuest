@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node src/index.js",
     "setup": "node src/scripts/setup.js",
-    "check": "node src/scripts/check.js"
+    "check": "node src/scripts/check.js",
+    "panels": "node src/index.js --panels"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

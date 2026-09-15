@@ -48,14 +48,15 @@ async function sendLog(guild, key, payload) {
   });
 }
 
-// Publie (ou met à jour) un message « panneau » identifié par le texte du footer de son embed.
+// Publie (ou met à jour) un message « panneau » identifié par le footer de son dernier embed.
 // Les boutons d'un message sont liés au bot qui l'a posté : si un autre bot Ocean possède
 // l'ancien panneau, il est remplacé.
 async function ensurePanel(client, channel, payload, { otherBotIds = [] } = {}) {
   if (!channel?.isTextBased()) return null;
-  const footer = payload.embeds?.[0]?.data?.footer?.text ?? payload.embeds?.[0]?.footer?.text;
+  const last = payload.embeds?.at(-1);
+  const footer = last?.data?.footer?.text ?? last?.footer?.text;
   const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
-  const matches = messages ? [...messages.values()].filter((m) => m.author.bot && m.embeds[0]?.footer?.text === footer) : [];
+  const matches = messages ? [...messages.values()].filter((m) => m.author.bot && m.embeds.at(-1)?.footer?.text === footer) : [];
   const mine = matches.find((m) => m.author.id === client.user.id);
   for (const stale of matches) {
     if (stale !== mine && (otherBotIds.includes(stale.author.id))) await stale.delete().catch(() => null);

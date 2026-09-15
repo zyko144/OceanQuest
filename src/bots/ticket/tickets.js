@@ -7,7 +7,7 @@ const config = require('../../config');
 const db = require('../../lib/db');
 const { STAFF_LEVELS } = require('../../lib/layout');
 const { findChannel, findRole, isStaff, getMainGuild, channelMention } = require('../../lib/guild');
-const { oceanEmbed, colors, ok, fail, WAVE } = require('../../lib/embeds');
+const { oceanEmbed, colors, ok, fail, WAVE, paragraphs } = require('../../lib/embeds');
 const { sendLog, ensurePanel, ephemeral, truncate, unix } = require('../../lib/util');
 const TYPES = require('./types');
 const { buildTranscript } = require('./transcript');
@@ -66,21 +66,21 @@ function canManage(member, ticket) {
 }
 
 function panelPayload(guild) {
-  const lines = TYPES.map((t) => `${t.emoji} **${t.label}** — ${t.description}`).join('\n');
   const embed = oceanEmbed({
-    title: '🛟 Secours en Mer — Centre des tickets',
-    description: [
-      'Une avarie ? Une question ? L’équipage d’**Ocean Quest** vole à ton secours.',
-      '',
-      lines,
-      '',
+    title: '🛟  Secours en Mer — Centre des tickets',
+    description: paragraphs(
+      '> Une avarie ? Une question ?\n> L’équipage d’**Ocean Quest** vole à ton secours. 🚤',
+      '### 🎫  Choisis ton type de ticket',
+      TYPES.map((t) => `${t.emoji}  **${t.label}**\n-# ${t.description}`),
       WAVE,
-      '📌 **Avant d’ouvrir un ticket**',
-      `• Jette un œil à la ${channelMention(guild, 'faq', 'FAQ')}`,
-      '• Un ticket = un seul sujet, avec un maximum de détails',
-      '• Ne ping pas le staff, on arrive 🚤',
-      '• Tout abus du système de tickets sera sanctionné',
-    ].join('\n'),
+      '### 📌  Avant d’ouvrir un ticket',
+      [
+        `• Jette un œil à la ${channelMention(guild, 'faq', '#faq')}`,
+        '• Un ticket = un seul sujet, avec un maximum de détails',
+        '• Ne ping pas le staff, on arrive vite',
+        '• Tout abus du système de tickets sera sanctionné',
+      ].join('\n'),
+    ),
     color: colors.ocean,
     footer: PANEL_FOOTER,
     timestamp: false,
@@ -178,8 +178,12 @@ async function onForm(interaction, typeId) {
   await channel.send({
     content: `${member} ${pingRole ? `・ ${pingRole}` : ''}`,
     embeds: [oceanEmbed({
-      title: `${type.emoji} Ticket n°${pad(number)} — ${type.label}`,
-      description: `Ahoy ${member} ! Un membre de l’équipage va te répondre très vite.\nAjoute toutes les captures ou vidéos utiles ici. 🌊\n\n${WAVE}`,
+      title: `${type.emoji}  Ticket n°${pad(number)} — ${type.label}`,
+      description: paragraphs(
+        `> Ahoy ${member} ! Un membre de l’équipage va te répondre très vite.`,
+        '-# 📎 Ajoute ici toutes les captures ou vidéos utiles.',
+        `${WAVE}\n### 📝  Ta demande`,
+      ),
       fields: answers.map((a) => ({ name: a.label, value: truncate(a.value, 1024) })),
       color: colors.lagoon,
       thumbnail: member.displayAvatarURL({ size: 256 }),
@@ -285,7 +289,12 @@ async function closeTicket(interaction, reason) {
     await owner.send({
       embeds: [oceanEmbed({
         title: `🔒 Ton ticket n°${pad(ticket.number)} est fermé`,
-        description: `Merci d’avoir contacté l’équipage d’**Ocean Quest** !\n**Raison :** ${reason || 'Aucune raison donnée'}\n\nTu trouveras le transcript de la conversation en pièce jointe.\n**Comment s’est passé ton sauvetage ?**`,
+        description: paragraphs(
+          '> Merci d’avoir contacté l’équipage d’**Ocean Quest** ! 💙',
+          `**Raison**\n-# ${reason || 'Aucune raison donnée'}`,
+          '📜 Le transcript de la conversation est en pièce jointe.',
+          '### ⭐  Comment s’est passé ton sauvetage ?',
+        ),
         color: colors.ocean,
         footer: TICKET_FOOTER,
       })],
@@ -300,7 +309,11 @@ async function closeTicket(interaction, reason) {
   await interaction.editReply({
     embeds: [oceanEmbed({
       title: '🔒 Ticket fermé',
-      description: `Fermé par ${member}${reason ? `\n**Raison :** ${reason}` : ''}\n\nLe staff peut rouvrir, récupérer le transcript ou supprimer ce ticket.`,
+      description: paragraphs(
+        `> Fermé par ${member}`,
+        reason ? `**Raison**\n-# ${reason}` : null,
+        '-# Le staff peut rouvrir, récupérer le transcript ou supprimer ce ticket.',
+      ),
       color: colors.warning,
       footer: TICKET_FOOTER,
     })],

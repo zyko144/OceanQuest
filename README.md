@@ -41,6 +41,7 @@ Les trois bots tournent dans **un seul service Render**.
 npm install
 npm run check   # vérifie tokens, intents, serveur et Supabase
 npm run setup   # crée rôles, catégories et salons
+npm run panels  # met à jour les panneaux (règlement, tickets…) puis s'arrête
 npm start       # lance les bots + serveur web
 ```
 

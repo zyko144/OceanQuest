@@ -3,7 +3,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, GatewayIntentBits } = require('discord.js');
 const config = require('../../config');
 const { findChannel, findRole, channelMention } = require('../../lib/guild');
-const { oceanEmbed, colors, ok, fail, WAVE } = require('../../lib/embeds');
+const { oceanEmbed, colors, ok, fail, WAVE, paragraphs } = require('../../lib/embeds');
 const { ensurePanel, ephemeral, sendLog, shuffle, pick, unix } = require('../../lib/util');
 const { isRaid, FOOTER } = require('./state');
 
@@ -20,16 +20,15 @@ const pending = new Map();
 function panelPayload(guild) {
   return {
     embeds: [oceanEmbed({
-      title: '✅ Monter à bord d’Ocean Quest',
-      description: [
-        'Bienvenue sur le quai, moussaillon ! 🌊',
-        '',
-        `Avant d’embarquer, lis le ${channelMention(guild, 'rules', 'règlement')} puis prouve que tu n’es pas un robot des profondeurs.`,
-        '',
+      title: '✅  Monter à bord d’Ocean Quest',
+      description: paragraphs(
+        '> Bienvenue sur le quai, moussaillon ! 🌊\n> Prouve que tu n’es pas un robot des profondeurs pour embarquer.',
+        `### 📜  Étape 1\nLis le ${channelMention(guild, 'rules', '#reglement')}`,
+        '### 🎣  Étape 2\nClique sur **Monter à bord** et trouve la bonne créature marine.',
+        `### 🔓  Étape 3\nTu débloques tout le serveur et le rôle ${findRole(guild, 'member') ?? '🎣 Moussaillon'} !`,
         WAVE,
-        '🎣 Clique sur **Monter à bord** et trouve la bonne créature marine.',
-        `🔓 Tu débloqueras tout le serveur et le rôle ${findRole(guild, 'member') ?? '🎣 Moussaillon'}.`,
-      ].join('\n'),
+        `-# ⏳ Ton compte Discord doit avoir au moins ${config.security.minAccountAgeDays} jours.`,
+      ),
       color: colors.lagoon,
       footer: PANEL_FOOTER,
       timestamp: false,
@@ -48,7 +47,7 @@ function captcha(userId, attemptsLeft) {
   return {
     embeds: [oceanEmbed({
       title: '🧭 Épreuve du marin',
-      description: `Clique sur **${name}** pour monter à bord.\n*Essais restants : ${attemptsLeft}*`,
+      description: paragraphs(`> Clique sur **${name}** pour monter à bord.`, `-# Essais restants : ${attemptsLeft}`),
       color: colors.ocean,
       footer: FOOTER,
     })],

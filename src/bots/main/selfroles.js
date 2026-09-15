@@ -2,39 +2,37 @@
 
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, GatewayIntentBits } = require('discord.js');
 const { findChannel, findRole } = require('../../lib/guild');
-const { oceanEmbed, colors, ok, fail, WAVE } = require('../../lib/embeds');
+const { oceanEmbed, colors, ok, fail, WAVE, paragraphs } = require('../../lib/embeds');
 const { ensurePanel, ephemeral } = require('../../lib/util');
 
 const NOTIFICATIONS = [
-  { key: 'ping_news', emoji: '📢', label: 'Annonces' },
-  { key: 'ping_updates', emoji: '🆕', label: 'Mises à jour' },
-  { key: 'ping_events', emoji: '🎉', label: 'Événements' },
-  { key: 'ping_giveaways', emoji: '🎁', label: 'Giveaways' },
-  { key: 'ping_rare', emoji: '🐟', label: 'Bancs rares' },
+  { key: 'ping_news', emoji: '📢', label: 'Annonces', hint: 'Les grandes nouvelles du port' },
+  { key: 'ping_updates', emoji: '🆕', label: 'Mises à jour', hint: 'Chaque nouvelle marée du jeu' },
+  { key: 'ping_events', emoji: '🎉', label: 'Événements', hint: 'Tournois de pêche et chasses au trésor' },
+  { key: 'ping_giveaways', emoji: '🎁', label: 'Giveaways', hint: 'Les coffres au trésor à gagner' },
+  { key: 'ping_rare', emoji: '🐟', label: 'Bancs rares', hint: 'Poissons rares et events en jeu' },
 ];
 const PLATFORMS = [
-  { key: 'pc', emoji: '💻', label: 'PC' },
-  { key: 'mobile', emoji: '📱', label: 'Mobile' },
-  { key: 'console', emoji: '🎮', label: 'Console' },
+  { key: 'pc', emoji: '💻', label: 'PC', hint: 'Tu navigues sur ordinateur' },
+  { key: 'mobile', emoji: '📱', label: 'Mobile', hint: 'Tu navigues sur téléphone ou tablette' },
+  { key: 'console', emoji: '🎮', label: 'Console', hint: 'Tu navigues sur Xbox ou PlayStation' },
 ];
 
 function panelPayload(guild) {
-  const describe = (list) => list.map((r) => `${r.emoji} ${findRole(guild, r.key) ?? r.label}`).join('\n');
+  const describe = (list) => list.map((r) => `${r.emoji}  ${findRole(guild, r.key) ?? r.label}\n-# ${r.hint}`);
   const row = (list, style) => new ActionRowBuilder().addComponents(list.map((r) => new ButtonBuilder()
     .setCustomId(`roles:toggle:${r.key}`).setStyle(style).setEmoji(r.emoji).setLabel(r.label)));
   return {
     embeds: [oceanEmbed({
-      title: '🧭 Hisse tes couleurs !',
-      description: [
-        'Clique sur un bouton pour **ajouter** ou **retirer** un rôle.',
-        '',
-        '**🔔 Notifications** — sois prévenu quand la marée change',
+      title: '🧭  Hisse tes couleurs !',
+      description: paragraphs(
+        '> Clique sur un bouton pour **ajouter** un rôle.\n> Reclique dessus pour le **retirer**.',
+        '### 🔔  Notifications',
         describe(NOTIFICATIONS),
-        '',
         WAVE,
-        '**🕹️ Plateforme** — sur quoi navigues-tu ?',
+        '### 🕹️  Plateforme',
         describe(PLATFORMS),
-      ].join('\n'),
+      ),
       color: colors.ocean,
       footer: 'Ocean Quest ・ Auto-rôles',
       timestamp: false,

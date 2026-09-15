@@ -3,7 +3,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, GatewayIntentBits } = require('discord.js');
 const config = require('../../config');
 const { findChannel, findRole, channelMention } = require('../../lib/guild');
-const { oceanEmbed, colors, WAVE } = require('../../lib/embeds');
+const { oceanEmbed, colors, WAVE, paragraphs } = require('../../lib/embeds');
 const { ensurePanel } = require('../../lib/util');
 
 const GREETINGS = [
@@ -21,21 +21,32 @@ function linkButtons() {
   return buttons.length ? [new ActionRowBuilder().addComponents(buttons)] : [];
 }
 
+const RULES = [
+  ['⚓', 'Respect de l’équipage', 'Aucune insulte, harcèlement, discrimination ou propos haineux.'],
+  ['🌊', 'Pas de tempête de messages', 'Pas de spam, de flood, de mentions abusives ni de majuscules à outrance.'],
+  ['📢', 'Pas de publicité', 'Invitations Discord et autopromotion interdites sans l’accord du staff.'],
+  ['🔞', 'Contenu tout public', 'Rien de NSFW, choquant ou illégal — pseudo et photo de profil compris.'],
+  ['⚖️', 'Échanges honnêtes', 'Arnaque lors d’un échange = bannissement. Aucun échange contre de l’argent réel.'],
+  ['🛠️', 'Pas de triche', 'Exploits, scripts et hacks interdits. Un bug ? Signale-le en ticket.'],
+  ['🔐', 'Protège ton compte', 'Ne partage jamais ton mot de passe Roblox. Le staff ne te le demandera **jamais**.'],
+  ['🧭', 'Chaque salon a son cap', 'Utilise les salons pour leur usage et parle principalement français.'],
+  ['🎖️', 'Les officiers ont le dernier mot', 'Pour contester une décision, ouvre un ticket « Contester une sanction ».'],
+];
+
 const panels = {
   welcome: (guild) => ({
     embeds: [oceanEmbed({
-      title: '🌊 Bienvenue au port d’Ocean Quest !',
-      description: [
-        'Ici se retrouvent tous les pêcheurs, capitaines et chasseurs de légendes du jeu **Ocean Quest** sur Roblox.',
-        '',
+      title: '🌊  Bienvenue au port d’Ocean Quest !',
+      description: paragraphs(
+        '> Ici se retrouvent tous les pêcheurs, capitaines et chasseurs de légendes du jeu **Ocean Quest** sur Roblox.',
+        '### 🧭  Pour bien embarquer',
+        `**1 ・ 📜 Lis le Code des Marins**\n-# ➜ ${channelMention(guild, 'rules', '#reglement')}`,
+        `**2 ・ ✅ Monte à bord**\n-# ➜ ${channelMention(guild, 'verify', '#verification')}`,
+        `**3 ・ 🎨 Choisis tes rôles**\n-# ➜ ${channelMention(guild, 'selfroles', '#roles')}`,
+        `**4 ・ 🍻 Viens discuter avec l’équipage**\n-# ➜ ${channelMention(guild, 'general', '#taverne')}`,
         WAVE,
-        `📜 **1.** Lis le ${channelMention(guild, 'rules', 'règlement')}`,
-        `✅ **2.** Monte à bord dans ${channelMention(guild, 'verify', 'la vérification')}`,
-        `🧭 **3.** Choisis tes rôles dans ${channelMention(guild, 'selfroles', 'les rôles')}`,
-        `🍻 **4.** Viens discuter dans ${channelMention(guild, 'general', 'la taverne')}`,
-        '',
-        `🛟 Besoin d’aide ? ${channelMention(guild, 'ticket_panel', 'Ouvre un ticket')}`,
-      ].join('\n'),
+        `### 🛟  Besoin d’aide ?\nOuvre un ticket dans ${channelMention(guild, 'ticket_panel', '#ouvrir-un-ticket')}, on arrive ! 🚤`,
+      ),
       color: colors.ocean,
       footer: 'Ocean Quest ・ Embarcadère',
       timestamp: false,
@@ -44,53 +55,46 @@ const panels = {
   }),
 
   rules: () => ({
-    embeds: [oceanEmbed({
-      title: '📜 Le Code des Marins',
-      description: [
-        'Tout marin qui monte à bord accepte ce code. L’ignorer ne te protège pas des sanctions.',
-        '',
-        '**⚓ 1. Respect de l’équipage**\nAucune insulte, harcèlement, discrimination ou propos haineux.',
-        '**🌊 2. Pas de tempête de messages**\nPas de spam, de flood, de mentions abusives ni de majuscules à outrance.',
-        '**📢 3. Pas de publicité**\nInvitations Discord et autopromotion interdites sans accord du staff (ouvre un ticket partenariat).',
-        '**🔞 4. Contenu tout public**\nPas de contenu NSFW, choquant, violent ou illégal — pseudo et photo de profil compris.',
-        '**⚖️ 5. Échanges honnêtes**\nToute arnaque lors d’un échange = bannissement. Aucun échange contre de l’argent réel ou des Robux hors jeu.',
-        '**🛠️ 6. Pas de triche**\nExploits, scripts et hacks sont interdits. Un bug ? Signale-le en ticket, ne l’exploite pas.',
-        '**🔐 7. Protège ton compte**\nNe partage jamais ton mot de passe ou tes cookies Roblox. Le staff ne te les demandera **jamais**.',
-        '**🧭 8. Chaque salon a son cap**\nUtilise les salons pour leur usage prévu et parle principalement français.',
-        '**🎖️ 9. Les officiers ont le dernier mot**\nRespecte les décisions du staff. Pour contester, ouvre un ticket « Contester une sanction ».',
-        '',
-        WAVE,
-        '**Échelle des sanctions :** ⚠️ Avertissement → 🔇 Sourdine → 👢 Expulsion → 🔨 Bannissement',
-        'Tu dois aussi respecter les [Conditions d’utilisation](https://discord.com/terms) et les [Règles de la communauté](https://discord.com/guidelines) de Discord, ainsi que les règles de Roblox.',
-      ].join('\n'),
-      color: colors.deep,
-      footer: 'Ocean Quest ・ Code des Marins',
-      timestamp: false,
-    })],
+    embeds: [
+      oceanEmbed({
+        title: '📜  Le Code des Marins',
+        description: paragraphs(
+          '> Tout marin qui monte à bord accepte ce code.\n> L’ignorer ne te protège pas des sanctions.',
+          ...RULES.map(([emoji, title, text], i) => `### ${emoji}  ${i + 1} ・ ${title}\n${text}`),
+        ),
+        color: colors.deep,
+        footer: false,
+        timestamp: false,
+      }),
+      oceanEmbed({
+        title: '⚖️  Échelle des sanctions',
+        description: paragraphs(
+          '⚠️ **Avertissement**\n-# Un rappel à l’ordre. 3 avertissements = sourdine automatique.',
+          '🔇 **Sourdine**\n-# Tu ne peux plus écrire pendant un moment.',
+          '👢 **Expulsion**\n-# Tu es débarqué du serveur.',
+          '🔨 **Bannissement**\n-# Tu es jeté par-dessus bord, définitivement.',
+          WAVE,
+          '-# En restant ici, tu acceptes aussi les [Conditions d’utilisation](https://discord.com/terms) et les [Règles de la communauté](https://discord.com/guidelines) de Discord, ainsi que les règles de Roblox.',
+        ),
+        color: colors.deep,
+        footer: 'Ocean Quest ・ Code des Marins',
+        timestamp: false,
+      }),
+    ],
   }),
 
   faq: (guild) => ({
     embeds: [oceanEmbed({
-      title: '❓ Foire Aux Questions du port',
-      description: [
-        '**🎮 Comment jouer à Ocean Quest ?**',
-        `Le lien du jeu est dans ${channelMention(guild, 'links', 'les liens utiles')} ou avec la commande \`/jouer\`.`,
-        '',
-        '**🐛 J’ai trouvé un bug, je fais quoi ?**',
-        `Ouvre un ticket « Signaler un bug » dans ${channelMention(guild, 'ticket_panel', 'le centre des tickets')} avec une capture ou une vidéo.`,
-        '',
-        '**💰 Mon achat (Game Pass / objet) n’est pas arrivé.**',
-        'Relance le jeu. Si le problème persiste, ouvre un ticket « Achats & Robux » avec la date de l’achat.',
-        '',
-        '**🎣 Comment obtenir les rôles de pêcheur ?**',
-        'Discute sur le serveur pour gagner de l’XP : 🐠 niveau 5, 🐡 15, 🦈 30, 🐋 50, 🦑 75. Vérifie ton niveau avec `/rang`.',
-        '',
-        '**🐟 Il y a un mini-jeu sur Discord ?**',
-        `Oui ! Utilise \`/pecher\` dans ${channelMention(guild, 'bot_commands', 'les commandes')}, puis \`/aquarium\` pour voir ta collection.`,
-        '',
-        '**⚓ Comment rejoindre le staff ?**',
-        'Quand les recrutements sont ouverts, ouvre un ticket « Candidature Staff ».',
-      ].join('\n'),
+      title: '❓  Foire Aux Questions du port',
+      description: paragraphs(
+        '> Les réponses aux questions que tous les moussaillons se posent.',
+        `### 🎮  Comment jouer à Ocean Quest ?\nLe lien est dans ${channelMention(guild, 'links', '#liens-utiles')} ou avec la commande \`/jouer\`.`,
+        `### 🐛  J’ai trouvé un bug, je fais quoi ?\nOuvre un ticket **Signaler un bug** dans ${channelMention(guild, 'ticket_panel', '#ouvrir-un-ticket')}, avec une capture ou une vidéo.`,
+        '### 💰  Mon achat n’est pas arrivé\nRelance le jeu. Si ça persiste, ouvre un ticket **Achats & Robux** avec la date de l’achat.',
+        '### 🎣  Comment obtenir les rôles de pêcheur ?\nDiscute pour gagner de l’XP, puis vérifie ton niveau avec `/rang`.\n-# 🐠 niv. 5 ・ 🐡 niv. 15 ・ 🦈 niv. 30 ・ 🐋 niv. 50 ・ 🦑 niv. 75',
+        `### 🐟  Il y a un mini-jeu sur Discord ?\nOui ! Tape \`/pecher\` dans ${channelMention(guild, 'bot_commands', '#commandes')}, puis \`/aquarium\` pour voir ta collection.`,
+        '### ⚓  Comment rejoindre le staff ?\nQuand les recrutements sont ouverts, ouvre un ticket **Candidature Staff**.',
+      ),
       color: colors.lagoon,
       footer: 'Ocean Quest ・ FAQ',
       timestamp: false,
@@ -99,13 +103,14 @@ const panels = {
 
   links: () => ({
     embeds: [oceanEmbed({
-      title: '🔗 Liens utiles',
-      description: [
-        config.game.robloxUrl ? `🎮 **Jeu Roblox :** ${config.game.robloxUrl}` : '🎮 **Jeu Roblox :** bientôt disponible !',
-        config.game.groupUrl ? `👥 **Groupe Roblox :** ${config.game.groupUrl}` : null,
-        '',
-        '🔔 Rejoins le groupe Roblox pour recevoir des bonus exclusifs en jeu.',
-      ].filter((line) => line !== null).join('\n'),
+      title: '🔗  Liens utiles',
+      description: paragraphs(
+        '> Tout ce qu’il te faut pour prendre la mer.',
+        `### 🎮  Jeu Roblox\n${config.game.robloxUrl || 'Bientôt disponible, garde un œil sur les annonces ! 👀'}`,
+        `### 👥  Groupe Roblox\n${config.game.groupUrl || 'Bientôt disponible !'}`,
+        WAVE,
+        '-# 🔔 Rejoins le groupe Roblox pour recevoir des bonus exclusifs en jeu.',
+      ),
       color: colors.ocean,
       footer: 'Ocean Quest ・ Liens',
       timestamp: false,
@@ -122,8 +127,12 @@ async function onMemberAdd(member) {
   await channel.send({
     content: `${member}`,
     embeds: [oceanEmbed({
-      title: `⚓ Matelot n°${member.guild.memberCount}`,
-      description: `${line}\n\n✅ Passe par ${channelMention(member.guild, 'verify', 'la vérification')} pour débloquer le serveur.\n📜 N’oublie pas le ${channelMention(member.guild, 'rules', 'règlement')} !`,
+      title: `⚓  Matelot n°${member.guild.memberCount}`,
+      description: paragraphs(
+        `> ${line}`,
+        `✅ **Monte à bord**\n-# ➜ ${channelMention(member.guild, 'verify', '#verification')}`,
+        `📜 **Lis le Code des Marins**\n-# ➜ ${channelMention(member.guild, 'rules', '#reglement')}`,
+      ),
       color: colors.lagoon,
       thumbnail: member.displayAvatarURL({ size: 256 }),
       footer: 'Ocean Quest ・ Nouveau marin',

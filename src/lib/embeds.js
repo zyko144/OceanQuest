@@ -14,6 +14,10 @@ const colors = {
 };
 
 const WAVE = '〰〰〰〰〰〰〰〰〰〰〰〰';
+const SPACE = '​';
+
+// Assemble des paragraphes séparés par une ligne vide (les null/false sont ignorés).
+const paragraphs = (...parts) => parts.flat().filter((p) => p !== null && p !== undefined && p !== false && p !== '').join('\n\n');
 
 function oceanEmbed({ title, description, color = colors.ocean, footer, fields, thumbnail, image, timestamp = true } = {}) {
   const embed = new EmbedBuilder().setColor(color);
@@ -22,7 +26,7 @@ function oceanEmbed({ title, description, color = colors.ocean, footer, fields, 
   if (fields?.length) embed.addFields(fields.slice(0, 25));
   if (thumbnail) embed.setThumbnail(thumbnail);
   if (image) embed.setImage(image);
-  embed.setFooter({ text: footer ?? `${config.game.name} ・ 🌊` });
+  if (footer !== false) embed.setFooter({ text: footer ?? `${config.game.name} ・ 🌊` });
   if (timestamp) embed.setTimestamp();
   return embed;
 }
@@ -30,4 +34,4 @@ function oceanEmbed({ title, description, color = colors.ocean, footer, fields, 
 const ok = (description, title = '✅ Cap validé') => oceanEmbed({ title, description, color: colors.success });
 const fail = (description, title = '🌊 Mauvaise marée') => oceanEmbed({ title, description, color: colors.danger });
 
-module.exports = { colors, WAVE, oceanEmbed, ok, fail };
+module.exports = { colors, WAVE, SPACE, paragraphs, oceanEmbed, ok, fail };

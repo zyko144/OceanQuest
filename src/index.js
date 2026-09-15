@@ -65,8 +65,11 @@ function makeCtx(bot) {
   return bot.ctx;
 }
 
+// `npm run panels` : met à jour les panneaux puis s'arrête (sans serveur web).
+const PANELS_ONLY = process.argv.includes('--panels');
+
 async function main() {
-  startWebServer(registry);
+  if (!PANELS_ONLY) startWebServer(registry);
   await db.init();
 
   const bots = planBots();
@@ -83,6 +86,13 @@ async function main() {
     }, 500);
   });
   await waitReady();
+
+  if (PANELS_ONLY) {
+    await refreshPanels();
+    console.log('[panels] Panneaux mis à jour ✔');
+    await shutdown('fin');
+    return;
+  }
 
   if (config.setupOnStart) {
     console.log('[boot] SETUP_ON_START → construction du serveur');
