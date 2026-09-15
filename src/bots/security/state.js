@@ -26,7 +26,7 @@ async function activateRaid(guild, reason, durationMin = config.security.raidDur
   state.previousVerification = guild.verificationLevel;
   await guild.setVerificationLevel(GuildVerificationLevel.VeryHigh, `Mode raid : ${reason}`).catch(() => null);
   await sendLog(guild, 'log_security', {
-    content: `${roleMention(guild, 'manager')} ${roleMention(guild, 'moderator')}`.trim() || undefined,
+    content: `${roleMention(guild, 'moderator')} ${roleMention(guild, 'admin')}`.trim() || undefined,
     allowedMentions: { parse: ['roles'] },
     embeds: [oceanEmbed({
       title: '🌪️ ALERTE TEMPÊTE — Mode raid activé',

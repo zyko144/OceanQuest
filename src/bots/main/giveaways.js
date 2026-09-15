@@ -74,7 +74,7 @@ async function onJoin(interaction) {
 
 const command = {
   data: new SlashCommandBuilder().setName('giveaway').setDescription('🎁 Gérer les giveaways')
-    .setDefaultMemberPermissions(P.ManageMessages)
+    .setDefaultMemberPermissions(P.ManageGuild)
     .addSubcommand((s) => s.setName('lancer').setDescription('Lancer un giveaway')
       .addStringOption((o) => o.setName('prix').setDescription('Ce qu’on gagne').setRequired(true).setMaxLength(200))
       .addStringOption((o) => o.setName('duree').setDescription('Durée : 30m, 2h, 3j…').setRequired(true))
@@ -87,7 +87,7 @@ const command = {
       .addStringOption((o) => o.setName('message').setDescription('ID ou lien du message').setRequired(true))),
 
   async execute(interaction) {
-    if (!isStaff(interaction.member, 'manager')) return interaction.reply(ephemeral({ embeds: [fail('Réservé aux Capitaines.')] }));
+    if (!isStaff(interaction.member, 'admin')) return interaction.reply(ephemeral({ embeds: [fail('Réservé aux Amiraux.')] }));
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'lancer') {

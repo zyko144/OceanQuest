@@ -1,4 +1,4 @@
-const { MessageFlags } = require('discord.js');
+const { MessageFlags, MessageType } = require('discord.js');
 const { findChannel } = require('./guild');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -50,19 +50,29 @@ async function sendLog(guild, key, payload) {
 
 // Publie (ou met à jour) un message « panneau » identifié par le footer de son dernier embed.
 // Les boutons d'un message sont liés au bot qui l'a posté : si un autre bot Ocean possède
-// l'ancien panneau, il est remplacé.
-async function ensurePanel(client, channel, payload, { otherBotIds = [] } = {}) {
+// l'ancien panneau, il est remplacé. `pin` épingle le panneau (utile dans les salons où l'on
+// discute : il reste retrouvable même noyé sous les messages).
+async function ensurePanel(client, channel, payload, { otherBotIds = [], pin = false } = {}) {
   if (!channel?.isTextBased()) return null;
   const last = payload.embeds?.at(-1);
   const footer = last?.data?.footer?.text ?? last?.footer?.text;
-  const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
-  const matches = messages ? [...messages.values()].filter((m) => m.author.bot && m.embeds.at(-1)?.footer?.text === footer) : [];
+  const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+  const pins = pin ? await channel.messages.fetchPins().catch(() => null) : null;
+  const candidates = new Map([...(recent?.values() ?? []), ...(pins?.items.map((p) => p.message) ?? [])].map((m) => [m.id, m]));
+  const matches = [...candidates.values()].filter((m) => m.author.bot && m.embeds.at(-1)?.footer?.text === footer);
   const mine = matches.find((m) => m.author.id === client.user.id);
   for (const stale of matches) {
     if (stale !== mine && (otherBotIds.includes(stale.author.id))) await stale.delete().catch(() => null);
   }
-  if (mine) return mine.edit(payload).catch(() => channel.send(payload));
-  return channel.send(payload);
+  const message = mine ? await mine.edit(payload).catch(() => channel.send(payload)) : await channel.send(payload);
+  if (pin && !message.pinned) {
+    await message.pin('Panneau Ocean Quest').catch(() => null);
+    // Retire la notification « a épinglé un message » créée par le bot.
+    const notices = await channel.messages.fetch({ limit: 5 }).catch(() => null);
+    const notice = notices?.find((m) => m.type === MessageType.ChannelPinnedMessage && m.author.id === client.user.id);
+    await notice?.delete().catch(() => null);
+  }
+  return message;
 }
 
 const ephemeral = (payload) => ({ ...(typeof payload === 'string' ? { content: payload } : payload), flags: MessageFlags.Ephemeral });

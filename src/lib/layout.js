@@ -6,11 +6,9 @@ const { theme } = require('./fonts');
 
 // ───────────────────────── Rôles (du plus haut au plus bas) ─────────────────────────
 
-const MANAGER_PERMS = [
-  P.ViewAuditLog, P.ManageChannels, P.ManageRoles, P.ManageMessages, P.ManageNicknames, P.ManageThreads,
-  P.KickMembers, P.BanMembers, P.ModerateMembers, P.MuteMembers, P.DeafenMembers, P.MoveMembers,
-  P.MentionEveryone, P.ManageEvents, P.ManageGuildExpressions, P.ManageWebhooks,
-];
+// Capitaine = modérateur des tickets : supprime des messages, gère le vocal,
+// mais ne touche ni aux salons, ni aux rôles, ni aux annonces.
+const TICKET_MOD_PERMS = [P.ManageMessages, P.MoveMembers, P.MuteMembers];
 const MODERATOR_PERMS = [
   P.ViewAuditLog, P.ManageMessages, P.ManageNicknames, P.ManageThreads, P.KickMembers,
   P.ModerateMembers, P.MuteMembers, P.MoveMembers,
@@ -21,7 +19,7 @@ const roles = [
   // Direction & équipage
   { key: 'founder', name: '🔱 Poséidon', color: 0x00e5ff, hoist: true, permissions: [P.Administrator], about: 'Fondateur du jeu' },
   { key: 'admin', name: '🌊 Amiral', color: 0x0091ea, hoist: true, permissions: [P.Administrator], about: 'Administrateur' },
-  { key: 'manager', name: '⚓ Capitaine', color: 0x1565c0, hoist: true, permissions: MANAGER_PERMS, about: 'Responsable / gérant' },
+  { key: 'manager', name: '⚓ Capitaine', color: 0x1565c0, hoist: true, permissions: TICKET_MOD_PERMS, about: 'Modérateur des tickets' },
   { key: 'moderator', name: '🧭 Quartier-Maître', color: 0x26a69a, hoist: true, permissions: MODERATOR_PERMS, about: 'Modérateur' },
   { key: 'helper', name: '🛟 Garde-Côte', color: 0x4dd0e1, hoist: true, permissions: HELPER_PERMS, about: 'Support / helper' },
   { key: 'dev', name: '🛠️ Charpentier de Marine', color: 0x8d6e63, hoist: true, permissions: [], about: 'Développeur du jeu' },
@@ -58,10 +56,13 @@ const roles = [
 
 const STAFF_LEVELS = {
   helper: ['helper', 'moderator', 'manager', 'admin', 'founder'],
-  moderator: ['moderator', 'manager', 'admin', 'founder'],
+  moderator: ['moderator', 'admin', 'founder'],
   manager: ['manager', 'admin', 'founder'],
   admin: ['admin', 'founder'],
 };
+
+// Rôles qui voient et gèrent TOUS les tickets, quel que soit leur type.
+const TICKET_MODERATORS = ['manager'];
 
 // ───────────────────────── Permissions par type d'accès ─────────────────────────
 
@@ -77,7 +78,6 @@ const BOT = [P.ViewChannel, P.ReadMessageHistory, P.SendMessages, P.EmbedLinks, 
 const access = {
   public_readonly: () => [
     { role: '@everyone', allow: [...READ, P.AddReactions], deny: NO_TALK },
-    { role: 'manager', allow: [P.SendMessages] },
   ],
   verify: () => [
     { role: '@everyone', allow: READ, deny: [...NO_TALK, P.AddReactions] },
@@ -86,7 +86,6 @@ const access = {
   announce: () => [
     { role: '@everyone', deny: [P.ViewChannel] },
     { role: 'member', allow: [...READ, P.AddReactions], deny: NO_TALK },
-    { role: 'manager', allow: [P.SendMessages, P.MentionEveryone] },
   ],
   community: () => [
     { role: '@everyone', deny: [P.ViewChannel] },
@@ -237,4 +236,4 @@ const categoryName = (category) => theme.categoryName(category.emoji, category.l
 
 const allChannels = () => categories.flatMap((cat) => cat.channels.map((ch) => ({ ...ch, category: cat.key })));
 
-module.exports = { roles, categories, access, STAFF_LEVELS, BOT_CHANNEL_PERMS: BOT, channelName, categoryName, allChannels };
+module.exports = { roles, categories, access, STAFF_LEVELS, TICKET_MODERATORS, BOT_CHANNEL_PERMS: BOT, channelName, categoryName, allChannels };

@@ -50,12 +50,12 @@ const commands = [
   },
   {
     data: new SlashCommandBuilder().setName('annonce').setDescription('📢 Publier une annonce stylée')
-      .setDefaultMemberPermissions(P.ManageMessages)
+      .setDefaultMemberPermissions(P.ManageGuild)
       .addStringOption((o) => o.setName('salon').setDescription('Où publier').setRequired(true)
         .addChoices(...Object.entries(ANNOUNCE_TARGETS).map(([value, t]) => ({ name: t.label, value }))))
       .addBooleanOption((o) => o.setName('ping').setDescription('Mentionner le rôle de notification associé')),
     async execute(interaction) {
-      if (!isStaff(interaction.member, 'manager')) return interaction.reply(ephemeral({ embeds: [fail('Réservé aux Capitaines.')] }));
+      if (!isStaff(interaction.member, 'admin')) return interaction.reply(ephemeral({ embeds: [fail('Réservé aux Amiraux.')] }));
       const target = interaction.options.getString('salon');
       const ping = interaction.options.getBoolean('ping') ? '1' : '0';
       const modal = new ModalBuilder().setCustomId(`announce:send:${target}:${ping}`).setTitle('📢 Nouvelle annonce');

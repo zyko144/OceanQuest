@@ -211,8 +211,8 @@ module.exports = {
   components: {
     guard: async (interaction, [action]) => {
       if (action !== 'raidoff') return null;
-      if (!isStaff(interaction.member, 'manager')) {
-        return interaction.reply({ content: 'Réservé aux Capitaines.', flags: 64 });
+      if (!isStaff(interaction.member, 'moderator')) {
+        return interaction.reply({ content: 'Réservé aux Quartiers-Maîtres et aux Amiraux.', flags: 64 });
       }
       await deactivateRaid(interaction.guild, `${interaction.member}`);
       return interaction.update({ components: [] });

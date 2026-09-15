@@ -217,4 +217,4 @@ const commands = [
   },
 ];
 
-module.exports = { name: 'fishing', intents: [GatewayIntentBits.Guilds], commands, FISH, RARITIES };
+module.exports = { name: 'fishing', intents: [GatewayIntentBits.Guilds], commands, FISH, RARITIES, ZONES };

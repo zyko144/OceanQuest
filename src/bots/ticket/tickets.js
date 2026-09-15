@@ -5,7 +5,7 @@ const {
 } = require('discord.js');
 const config = require('../../config');
 const db = require('../../lib/db');
-const { STAFF_LEVELS } = require('../../lib/layout');
+const { STAFF_LEVELS, TICKET_MODERATORS } = require('../../lib/layout');
 const { findChannel, findRole, isStaff, getMainGuild, channelMention } = require('../../lib/guild');
 const { oceanEmbed, colors, ok, fail, WAVE, paragraphs } = require('../../lib/embeds');
 const { sendLog, ensurePanel, ephemeral, truncate, unix } = require('../../lib/util');
@@ -146,7 +146,7 @@ async function onForm(interaction, typeId) {
     .map((q) => ({ ...q, value: interaction.fields.getTextInputValue(q.id)?.trim() }))
     .filter((a) => a.value);
   const number = await nextTicketNumber(guild);
-  const staffRoles = STAFF_LEVELS[type.staff].map((key) => findRole(guild, key)).filter(Boolean);
+  const staffRoles = [...new Set([...STAFF_LEVELS[type.staff], ...TICKET_MODERATORS])].map((key) => findRole(guild, key)).filter(Boolean);
   const staffAllow = [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks, P.AddReactions, P.ManageMessages];
 
   const channel = await guild.channels.create({
@@ -174,9 +174,9 @@ async function onForm(interaction, typeId) {
     answers: Object.fromEntries(answers.map((a) => [a.id, a.value])),
   }).catch((e) => { console.warn('[tickets] db:', e.message); return null; });
 
-  const pingRole = findRole(guild, type.staff);
+  const pingRoles = [...new Set([type.staff, ...TICKET_MODERATORS])].map((key) => findRole(guild, key)).filter(Boolean);
   await channel.send({
-    content: `${member} ${pingRole ? `・ ${pingRole}` : ''}`,
+    content: [`${member}`, ...pingRoles.map(String)].join(' ・ '),
     embeds: [oceanEmbed({
       title: `${type.emoji}  Ticket n°${pad(number)} — ${type.label}`,
       description: paragraphs(
@@ -190,7 +190,7 @@ async function onForm(interaction, typeId) {
       footer: TICKET_FOOTER,
     })],
     components: [ticketButtons()],
-    allowedMentions: { users: [member.id], roles: pingRole ? [pingRole.id] : [] },
+    allowedMentions: { users: [member.id], roles: pingRoles.map((role) => role.id) },
   });
 
   await interaction.editReply({
@@ -403,7 +403,7 @@ const command = {
     const { guild, channel, member } = interaction;
 
     if (sub === 'panneau') {
-      if (!isStaff(member, 'manager')) return interaction.reply(ephemeral({ embeds: [fail('Réservé aux Capitaines.')] }));
+      if (!isStaff(member, 'admin')) return interaction.reply(ephemeral({ embeds: [fail('Réservé aux Amiraux.')] }));
       const target = findChannel(guild, 'ticket_panel') ?? channel;
       await ensurePanel(interaction.client, target, panelPayload(guild));
       return interaction.reply(ephemeral({ embeds: [ok(`Panneau publié dans ${target}.`)] }));
