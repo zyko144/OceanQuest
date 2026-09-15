@@ -5,7 +5,7 @@ Serveur Discord complet pour le jeu Roblox **Ocean Quest** : salons au style oc�
 | Bot | Rôle | Variable |
 | --- | --- | --- |
 | 🎫 **Ocean Ticket** | Centre des tickets (formulaires, prise en charge, transcripts HTML, notes) | `TICKET_BOT_TOKEN` |
-| 🛡️ **Ocean Guard** | Vérification captcha, anti-raid, anti-spam/arnaques/pubs, anti-nuke, logs, modération | `SECURITY_BOT_TOKEN` |
+| 🛡️ **Ocean Guard** | Vérification en 1 clic, anti-raid, anti-spam/arnaques/pubs, anti-nuke, logs, modération | `SECURITY_BOT_TOKEN` |
 | 🎣 **Ocean Quest** | Bienvenue, règlement, auto-rôles, niveaux, `/pecher`, suggestions, giveaways, annonces, `/setup` | `MAIN_BOT_TOKEN` |
 
 Tant qu'un token est vide, ses modules tournent sur un autre bot (par défaut **Ocean Ticket** fait tout).

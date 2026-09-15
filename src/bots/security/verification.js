@@ -1,129 +1,104 @@
-// Vérification « Monter à bord » : captcha marin + âge minimum du compte.
+// Vérification « Monter à bord » : un seul clic, pensée pour les plus jeunes.
+// Les comptes très récents ne sont pas bloqués mais signalés au staff ;
+// seul le mode raid (tempête) refuse temporairement les comptes de moins de 7 jours.
 
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, GatewayIntentBits } = require('discord.js');
 const config = require('../../config');
 const { findChannel, findRole, channelMention } = require('../../lib/guild');
-const { oceanEmbed, colors, ok, fail, WAVE, paragraphs } = require('../../lib/embeds');
-const { ensurePanel, ephemeral, sendLog, shuffle, pick, unix } = require('../../lib/util');
+const { oceanEmbed, colors, fail, WAVE, paragraphs } = require('../../lib/embeds');
+const { ensurePanel, ephemeral, sendLog, unix } = require('../../lib/util');
 const { isRaid, FOOTER } = require('./state');
 
 const PANEL_FOOTER = 'Ocean Guard ・ Vérification';
-const CREATURES = [
-  ['🦈', 'le requin'], ['🐙', 'le poulpe'], ['🦀', 'le crabe'], ['🐢', 'la tortue'], ['🐬', 'le dauphin'],
-  ['🐳', 'la baleine'], ['🦞', 'le homard'], ['🐡', 'le poisson-globe'], ['🦑', 'le calmar'], ['🦭', 'le phoque'],
-  ['🐚', 'le coquillage'], ['🪸', 'le corail'],
-];
-const MAX_ATTEMPTS = 3;
-const LOCK_MS = 5 * 60_000;
-const pending = new Map();
 
 function panelPayload(guild) {
   return {
     embeds: [oceanEmbed({
-      title: '✅  Monter à bord d’Ocean Quest',
+      title: '✅  Monte à bord !',
       description: paragraphs(
-        '> Bienvenue sur le quai, moussaillon ! 🌊\n> Prouve que tu n’es pas un robot des profondeurs pour embarquer.',
-        `### 📜  Étape 1\nLis le ${channelMention(guild, 'rules', '#reglement')}`,
-        '### 🎣  Étape 2\nClique sur **Monter à bord** et trouve la bonne créature marine.',
-        `### 🔓  Étape 3\nTu débloques tout le serveur et le rôle ${findRole(guild, 'member') ?? '🎣 Moussaillon'} !`,
+        '> Salut moussaillon ! 👋\n> Pour entrer sur le serveur, c’est **super simple** :',
+        `### 1️⃣  Lis le règlement\n📜 ${channelMention(guild, 'rules', '#reglement')}`,
+        '### 2️⃣  Clique sur le bouton vert\n👇 Juste en dessous !',
         WAVE,
-        `-# ⏳ Ton compte Discord doit avoir au moins ${config.security.minAccountAgeDays} jours.`,
+        `-# 🛟 Un souci ? Demande de l’aide dans ${channelMention(guild, 'ticket_panel', '#ouvrir-un-ticket')}`,
       ),
-      color: colors.lagoon,
+      color: colors.success,
       footer: PANEL_FOOTER,
       timestamp: false,
     })],
     components: [new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('verify:start').setStyle(ButtonStyle.Success).setEmoji('🌊').setLabel('Monter à bord'),
+      new ButtonBuilder().setCustomId('verify:start').setStyle(ButtonStyle.Success).setEmoji('✅').setLabel('Je monte à bord !'),
     )],
   };
 }
 
-function captcha(userId, attemptsLeft) {
-  const options = shuffle(CREATURES).slice(0, 5);
-  const [emoji, name] = pick(options);
-  const previous = pending.get(userId);
-  pending.set(userId, { answer: emoji, attempts: previous?.attempts ?? 0, expires: Date.now() + 2 * 60_000 });
-  return {
-    embeds: [oceanEmbed({
-      title: '🧭 Épreuve du marin',
-      description: paragraphs(`> Clique sur **${name}** pour monter à bord.`, `-# Essais restants : ${attemptsLeft}`),
-      color: colors.ocean,
-      footer: FOOTER,
-    })],
-    components: [new ActionRowBuilder().addComponents(options.map(([e]) => new ButtonBuilder()
-      .setCustomId(`verify:answer:${CREATURES.findIndex(([c]) => c === e)}`)
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(e)))],
-  };
+// Boutons pour aller directement dans les salons après la vérification.
+function shortcuts(guild) {
+  const links = [['general', '🍻', 'Taverne'], ['selfroles', '🧭', 'Mes rôles'], ['bot_commands', '🎣', 'Pêcher']]
+    .map(([key, emoji, label]) => [findChannel(guild, key), emoji, label])
+    .filter(([channel]) => channel)
+    .map(([channel, emoji, label]) => new ButtonBuilder().setStyle(ButtonStyle.Link).setURL(channel.url).setEmoji(emoji).setLabel(label));
+  return links.length ? [new ActionRowBuilder().addComponents(links)] : [];
 }
 
 async function onStart(interaction) {
-  const { guild, member } = interaction;
+  const { guild, member, user } = interaction;
   const role = findRole(guild, 'member');
-  if (!role) return interaction.reply(ephemeral({ embeds: [fail('Le rôle Moussaillon est introuvable. Un admin doit lancer `/setup`.')] }));
-  if (member.roles.cache.has(role.id)) return interaction.reply(ephemeral({ embeds: [ok('Tu es déjà à bord, matelot ! 🎣')] }));
+  if (!role) {
+    return interaction.reply(ephemeral({ embeds: [fail('Oups, la vérification n’est pas encore prête. Préviens un membre du staff ! 🛟')] }));
+  }
+  if (member.roles.cache.has(role.id)) {
+    return interaction.reply(ephemeral({
+      embeds: [oceanEmbed({ title: '🎣  Tu es déjà à bord !', description: '> Tu peux déjà voir tout le serveur. Amuse-toi bien ! 🌊', color: colors.success, footer: FOOTER })],
+      components: shortcuts(guild),
+    }));
+  }
 
-  const ageDays = (Date.now() - interaction.user.createdTimestamp) / 864e5;
-  if (ageDays < config.security.minAccountAgeDays) {
+  const ageDays = (Date.now() - user.createdTimestamp) / 864e5;
+  if (isRaid() && ageDays < 7) {
+    return interaction.reply(ephemeral({ embeds: [fail('> 🌪️ Il y a une grosse tempête sur le serveur en ce moment.\n> Réessaie dans quelques minutes !', '⛈️  Le port est fermé')] }));
+  }
+
+  try {
+    await member.roles.add(role, 'Vérification réussie');
+  } catch (error) {
     await sendLog(guild, 'log_security', oceanEmbed({
-      description: `⛔ Vérification refusée pour ${interaction.user} \`${interaction.user.id}\` : compte créé <t:${unix(interaction.user.createdTimestamp)}:R>.`,
-      color: colors.warning,
+      title: '⚠️ Vérification impossible',
+      description: `Je n’arrive pas à donner ${role} à ${user} : \`${error.message}\`\nVérifie que le rôle **${interaction.client.user.username}** est au-dessus de ${role} dans *Paramètres du serveur → Rôles*.`,
+      color: colors.danger,
       footer: FOOTER,
     }));
-    return interaction.reply(ephemeral({ embeds: [fail(`Ton compte Discord est trop récent pour embarquer (minimum **${config.security.minAccountAgeDays} jours**).\nReviens <t:${unix(interaction.user.createdTimestamp + config.security.minAccountAgeDays * 864e5)}:R> !`)] }));
-  }
-  if (isRaid() && ageDays < 30) {
-    return interaction.reply(ephemeral({ embeds: [fail('🌪️ Une tempête frappe le port : les vérifications sont suspendues quelques minutes. Réessaie bientôt !')] }));
+    return interaction.reply(ephemeral({ embeds: [fail('Oups, je n’arrive pas à te faire monter à bord. 😕\nLe staff a été prévenu, il va t’aider très vite !')] }));
   }
 
-  const entry = pending.get(interaction.user.id);
-  if (entry?.lockedUntil > Date.now()) {
-    return interaction.reply(ephemeral({ embeds: [fail(`Trop d’essais ratés. Réessaie <t:${unix(entry.lockedUntil)}:R>.`)] }));
-  }
-  if (entry?.lockedUntil) pending.delete(interaction.user.id);
-  return interaction.reply(ephemeral(captcha(interaction.user.id, MAX_ATTEMPTS - (pending.get(interaction.user.id)?.attempts ?? 0))));
-}
-
-async function onAnswer(interaction, index) {
-  const entry = pending.get(interaction.user.id);
-  if (!entry || entry.expires < Date.now() || entry.lockedUntil) {
-    return interaction.update({ embeds: [fail('Cette épreuve a expiré. Reclique sur **Monter à bord**.')], components: [] });
-  }
-  const chosen = CREATURES[Number(index)]?.[0];
-  if (chosen === entry.answer) {
-    pending.delete(interaction.user.id);
-    const role = findRole(interaction.guild, 'member');
-    await interaction.member.roles.add(role, 'Vérification réussie');
-    await interaction.update({
-      embeds: [ok(`Bienvenue à bord, ${interaction.user} ! 🎣\nFile saluer l’équipage dans ${channelMention(interaction.guild, 'general', 'la taverne')} et choisis tes rôles dans ${channelMention(interaction.guild, 'selfroles', 'les rôles')}.`, '⚓ Tu es à bord !')],
-      components: [],
-    });
-    return sendLog(interaction.guild, 'log_members', oceanEmbed({
-      description: `✅ ${interaction.user} \`${interaction.user.id}\` est monté à bord (vérifié).`,
+  await interaction.reply(ephemeral({
+    embeds: [oceanEmbed({
+      title: '🎉  Bienvenue à bord !',
+      description: paragraphs(
+        `> Bravo ${user}, tu fais maintenant partie de l’équipage ! 🎣`,
+        'Tu peux voir **tout le serveur**.\nClique sur un bouton pour commencer 👇',
+      ),
       color: colors.success,
       footer: FOOTER,
-    }));
-  }
+    })],
+    components: shortcuts(guild),
+  }));
 
-  entry.attempts += 1;
-  if (entry.attempts >= MAX_ATTEMPTS) {
-    entry.lockedUntil = Date.now() + LOCK_MS;
-    await sendLog(interaction.guild, 'log_security', oceanEmbed({
-      description: `🤖 ${interaction.user} \`${interaction.user.id}\` a raté la vérification ${MAX_ATTEMPTS} fois.`,
-      color: colors.warning,
-      footer: FOOTER,
-    }));
-    return interaction.update({ embeds: [fail(`Raté ! Tu pourras réessayer <t:${unix(entry.lockedUntil)}:R>.`)], components: [] });
-  }
-  return interaction.update(captcha(interaction.user.id, MAX_ATTEMPTS - entry.attempts));
+  const young = ageDays < config.security.minAccountAgeDays;
+  return sendLog(guild, young ? 'log_security' : 'log_members', oceanEmbed({
+    description: young
+      ? `👀 ${user} \`${user.id}\` est monté à bord avec un **compte très récent** (créé <t:${unix(user.createdTimestamp)}:R>). À surveiller.`
+      : `✅ ${user} \`${user.id}\` est monté à bord (vérifié).`,
+    color: young ? colors.warning : colors.success,
+    footer: FOOTER,
+  }));
 }
 
 module.exports = {
   name: 'verification',
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
   components: {
-    verify: (interaction, [action, index]) => (action === 'start' ? onStart(interaction) : onAnswer(interaction, index)),
+    verify: (interaction, [action]) => (action === 'start' ? onStart(interaction) : null),
   },
   async panels(client, guild, ctx) {
     const channel = findChannel(guild, 'verify');
