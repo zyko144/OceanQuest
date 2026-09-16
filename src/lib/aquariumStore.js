@@ -9,6 +9,7 @@ const config = require('../config');
 const db = require('./db');
 const robloxGame = require('./robloxGame');
 const robloxLinks = require('./robloxLinks');
+const robloxLinkRequests = require('./robloxLinkRequests');
 
 const KEY = {
   secret: 'aquarium_ig:secret',
@@ -91,6 +92,8 @@ function normalizePlayer(raw) {
 async function savePlayers(rawPlayers) {
   const now = Date.now();
   let saved = 0;
+  // Les joueurs en ligne servent aussi de suggestions à /lier (et reçoivent leurs demandes de liaison).
+  robloxLinkRequests.notePlayers(rawPlayers.slice(0, MAX_PLAYERS));
   for (const raw of rawPlayers.slice(0, MAX_PLAYERS)) {
     const player = normalizePlayer(raw);
     if (!player) continue;

@@ -55,9 +55,10 @@ Inventaires et achats sont rangés dans `guild_config` (`boutique:…`) : aucune
 - **Détection du jeu** : automatique dès que les serveurs du jeu contactent le bot (en-tête `Roblox-Id` ajouté par Roblox). Sinon `ROBLOX_GAME_URL` ou `ROBLOX_PLACE_ID`.
 - **Joueurs en ligne** : salon vocal `🎮︱ᴇɴ ᴍᴇʀ : N` et statut d'Ocean Quest, mis à jour toutes les 2 min.
 - **Mises à jour** : quand le jeu est republié, annonce dans `#mises-a-jour` avec l'image du jeu et le ping 🆕 Nouvelle Marée.
-- **Liaison vérifiée** (`/lier`) : le joueur colle 4 mots marins dans sa description Roblox, le bot vérifie. Rôle 🔗 Matelot Roblox.
+- **Liaison vérifiée** (`/lier`) : le joueur choisit son pseudo (les joueurs en jeu sont proposés), puis clique **dans le jeu** sur l'animal affiché sur Discord. Rien à écrire sur Roblox. Secours sans lancer le jeu : 4 mots marins dans la description Roblox. Rôle 🔗 Matelot Roblox.
 - **Récompenses** (`/recompense-roblox`) : rôle donné pour un badge, un game pass ou un nombre d'espèces à l'index, revérifié toutes les 30 min.
-- **Récompense en jeu** : `GET /roblox/lien/<robloxId>` (en-tête `X-Ocean-Secret`) répond `{ "relie": true|false }`. Script prêt : [`roblox/LienDiscord.server.lua`](roblox/LienDiscord.server.lua).
+- **Scripts du jeu** : [`roblox/LiaisonDiscord.server.lua`](roblox/LiaisonDiscord.server.lua) (ServerScriptService) et [`roblox/LiaisonDiscord.client.lua`](roblox/LiaisonDiscord.client.lua) (LocalScript dans StarterPlayerScripts). Ils affichent la fenêtre de liaison et mettent l'attribut `DiscordRelie` sur chaque joueur pour une récompense en jeu.
+- **API du jeu** (en-tête `X-Ocean-Secret`) : `POST /roblox/lien/attente` `{ joueurs: [{ userId, pseudo, affichage }] }` → demandes à afficher · `POST /roblox/lien/confirmer` `{ id, userId, choix | refus }` · `GET /roblox/lien/<userId>` → `{ relie }`.
 
 ## 📊 Tableau de bord
 

@@ -1,5 +1,7 @@
 // Liaison vérifiée Discord ↔ Roblox : /lier, /delier, /profil, /recompense-roblox.
-// Vérification : le joueur colle une phrase de 4 mots marins dans sa description Roblox
+// Méthode principale : le joueur lance le jeu et clique, dans une fenêtre, sur l'animal affiché
+// sur Discord (voir lib/robloxLinkRequests.js et roblox/LiaisonDiscord.*.lua).
+// Méthode de secours : une phrase de 4 mots marins à coller dans sa description Roblox
 // (des mots plutôt que des chiffres, que Roblox masque chez les moins de 13 ans).
 
 const {
@@ -9,6 +11,8 @@ const config = require('../../config');
 const db = require('../../lib/db');
 const roblox = require('../../lib/roblox');
 const robloxLinks = require('../../lib/robloxLinks');
+const robloxGame = require('../../lib/robloxGame');
+const linkRequests = require('../../lib/robloxLinkRequests');
 const aquariumStore = require('../../lib/aquariumStore');
 const { findRole, isStaff } = require('../../lib/guild');
 const { oceanEmbed, colors, ok, fail, paragraphs } = require('../../lib/embeds');
@@ -89,9 +93,9 @@ async function syncAll(guild) {
 function verifyPayload(entry) {
   return {
     embeds: [oceanEmbed({
-      title: '🔗  Relie ton compte Roblox',
+      title: '📝  Relier sans lancer le jeu',
       description: paragraphs(
-        `> Compte trouvé : **${entry.account.displayName}** (@${entry.account.name})`,
+        `> Compte : **${entry.account.displayName}** (@${entry.account.name})`,
         '### 1️⃣  Ouvre ton profil Roblox\nClique sur le bouton **Mon profil Roblox** ci-dessous.',
         `### 2️⃣  Colle cette phrase dans ta description\n\`\`\`${entry.phrase}\`\`\`\n-# Sur Roblox : modifie la partie « À propos » de ton profil, puis enregistre.`,
         '### 3️⃣  Reviens ici et clique sur ✅ Vérifier',
@@ -127,36 +131,108 @@ async function onVerify(interaction) {
     ), '❌  Pas encore')] }));
   }
 
-  const owner = await robloxLinks.ownerOf(user.id);
-  if (owner && owner !== interaction.user.id) {
-    pending.delete(interaction.user.id);
-    return interaction.editReply({ embeds: [fail('Ce compte Roblox est déjà relié à un autre membre du serveur.\n-# Si c’est une erreur, ouvre un ticket.')], components: [] });
-  }
-
   pending.delete(interaction.user.id);
-  await robloxLinks.set(interaction.user.id, user);
-  const rewards = await robloxLinks.rewards();
-  const { added } = await syncMember(interaction.guild, interaction.user.id, rewards);
-  await interaction.editReply({
+  const result = await completeLink(interaction.guild, interaction.user.id, user, 'description');
+  return interaction.editReply(result.error
+    ? { embeds: [fail(result.error)], components: [] }
+    : successPayload(user, result.added, entry.headshot, '🧹 Tu peux maintenant **retirer la phrase** de ta description Roblox.'));
+}
+
+// Enregistre la liaison, donne les rôles et journalise. → { added } ou { error }
+async function completeLink(guild, discordId, account, via) {
+  const owner = await robloxLinks.ownerOf(account.id);
+  if (owner && owner !== discordId) {
+    return { error: 'Ce compte Roblox est déjà relié à un autre membre du serveur.\n-# Si c’est une erreur, ouvre un ticket.' };
+  }
+  await robloxLinks.set(discordId, account);
+  const { added } = await syncMember(guild, discordId, await robloxLinks.rewards());
+  await sendLog(guild, 'log_members', oceanEmbed({
+    description: `🔗 <@${discordId}> \`${discordId}\` a relié le compte Roblox [${account.name}](${profileUrl(account.id)}) \`${account.id}\` (${via === 'jeu' ? 'confirmé en jeu' : 'description'})`,
+    color: colors.lagoon,
+    footer: FOOTER,
+  }));
+  return { added };
+}
+
+function successPayload(account, added, headshot, extra) {
+  return {
     embeds: [oceanEmbed({
       title: '🎉  Compte Roblox relié !',
       description: paragraphs(
-        `> Bienvenue à bord, **${user.displayName}** ! Ton compte est vérifié. ✅`,
-        added.length ? `🎁 Rôles obtenus : ${added.map((id) => `<@&${id}>`).join(' ')}` : null,
-        '🧹 Tu peux maintenant **retirer la phrase** de ta description Roblox.',
+        `> Bienvenue à bord, **${account.displayName ?? account.name}** ! Ton compte est vérifié. ✅`,
+        added?.length ? `🎁 Rôles obtenus : ${added.map((id) => `<@&${id}>`).join(' ')}` : null,
+        extra,
         '-# Tape `/profil` pour voir ta fiche de marin.',
       ),
-      thumbnail: entry.headshot ?? undefined,
+      thumbnail: headshot ?? undefined,
       color: colors.success,
       footer: FOOTER,
     })],
     components: [],
-  });
-  return sendLog(interaction.guild, 'log_members', oceanEmbed({
-    description: `🔗 ${interaction.user} \`${interaction.user.id}\` a relié le compte Roblox [${user.name}](${profileUrl(user.id)}) \`${user.id}\``,
-    color: colors.lagoon,
-    footer: FOOTER,
-  }));
+  };
+}
+
+// ───────── Méthode principale : confirmation dans le jeu ─────────
+
+const replies = new Map(); // discordId -> interaction /lier (pour mettre à jour le message, valable 15 min)
+
+function inGamePayload(request, headshot) {
+  const gameUrl = robloxGame.gameUrl();
+  const buttons = [];
+  if (gameUrl) buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setURL(gameUrl).setEmoji('🎮').setLabel('Lancer Ocean Quest'));
+  buttons.push(
+    new ButtonBuilder().setCustomId('rlink:bio').setStyle(ButtonStyle.Secondary).setEmoji('📝').setLabel('Sans lancer le jeu'),
+    new ButtonBuilder().setCustomId('rlink:cancel').setStyle(ButtonStyle.Secondary).setLabel('Annuler'),
+  );
+  return {
+    embeds: [oceanEmbed({
+      title: '🔗  Relie ton compte Roblox',
+      description: paragraphs(
+        `> Compte : **${request.account.displayName}** (@${request.account.name})`,
+        `### 1️⃣  Lance Ocean Quest sur Roblox\n-# Déjà en jeu ? Parfait, reste connecté !`,
+        `### 2️⃣  Dans la fenêtre qui s’ouvre, clique sur :\n# ${request.answer}`,
+        `-# ⏳ Valable <t:${unix(request.expires)}:R>. Ce message se met à jour tout seul quand c’est fait.`,
+      ),
+      thumbnail: headshot ?? undefined,
+      color: colors.ocean,
+      footer: FOOTER,
+    })],
+    components: [new ActionRowBuilder().addComponents(buttons)],
+  };
+}
+
+async function onGameResult(guild, status, request) {
+  const interaction = replies.get(request.discordId);
+  replies.delete(request.discordId);
+  const edit = (payload) => interaction?.editReply(payload).catch(() => null);
+  if (status === 'ok') {
+    const result = await completeLink(guild, request.discordId, request.account, 'jeu');
+    const headshot = await roblox.headshotUrl(request.account.id).catch(() => null);
+    return edit(result.error ? { embeds: [fail(result.error)], components: [] } : successPayload(request.account, result.added, headshot));
+  }
+  const messages = {
+    mauvais: ['Le mauvais animal a été choisi dans le jeu. Par sécurité, la demande est annulée.\n-# Recommence avec `/lier`.', '❌  Mauvais animal'],
+    refuse: ['La demande a été refusée dans le jeu (« Ce n’est pas moi »).\n-# Si c’était bien toi, recommence avec `/lier`.', '🚫  Refusé'],
+    deja: ['Ce compte Roblox est déjà relié à un autre membre du serveur.\n-# Si c’est une erreur, ouvre un ticket.', '⚠️  Déjà relié'],
+  };
+  const [text, title] = messages[status] ?? ['La demande a expiré. Recommence avec `/lier`.', '⌛  Expiré'];
+  return edit({ embeds: [fail(text, title)], components: [] });
+}
+
+// Trouve le compte depuis l'option /lier : suggestion (« id:123 »), pseudo exact, ou nom d'affichage d'un joueur vu en jeu.
+async function resolveAccount(input) {
+  const value = String(input ?? '').trim();
+  const idMatch = value.match(/^id:(\d{1,20})$/);
+  if (idMatch) {
+    const seen = linkRequests.recentPlayer(idMatch[1]);
+    if (seen) return { id: seen.userId, name: seen.pseudo, displayName: seen.affichage || seen.pseudo };
+    return roblox.userById(idMatch[1]);
+  }
+  const seen = linkRequests.searchPlayers(value, 50)
+    .find((p) => p.pseudo.toLowerCase() === value.toLowerCase() || p.affichage.toLowerCase() === value.toLowerCase());
+  if (seen) return { id: seen.userId, name: seen.pseudo, displayName: seen.affichage || seen.pseudo };
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(value)) return null;
+  return roblox.userByName(value);
 }
 
 // ───────── /profil ─────────
@@ -217,25 +293,38 @@ async function profilePayload(guild, target) {
 const commands = [
   {
     data: new SlashCommandBuilder().setName('lier').setDescription('🔗 Relier ton compte Roblox à Discord')
-      .addStringOption((o) => o.setName('pseudo').setDescription('Ton pseudo Roblox (pas le nom d’affichage)').setRequired(true).setMinLength(3).setMaxLength(20)),
+      .addStringOption((o) => o.setName('pseudo').setDescription('Ton pseudo Roblox (si tu es en jeu, choisis-le dans la liste)').setRequired(true)
+        .setMaxLength(40).setAutocomplete(true)),
+
+    async autocomplete(interaction) {
+      const players = linkRequests.searchPlayers(interaction.options.getFocused());
+      return interaction.respond(players.map((p) => ({
+        name: `🎮 ${p.affichage}${p.affichage !== p.pseudo ? ` (@${p.pseudo})` : ''} ・ en jeu`.slice(0, 100),
+        value: `id:${p.userId}`,
+      })));
+    },
+
     async execute(interaction) {
-      const pseudo = interaction.options.getString('pseudo').trim();
-      if (!/^[A-Za-z0-9_]{3,20}$/.test(pseudo)) {
-        return interaction.reply(ephemeral({ embeds: [fail('Un pseudo Roblox fait 3 à 20 caractères : lettres, chiffres et `_`.', '🔎 Pseudo invalide')] }));
-      }
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const account = await roblox.userByName(pseudo).catch(() => undefined);
+      const input = interaction.options.getString('pseudo');
+      const account = await resolveAccount(input).catch(() => undefined);
       if (account === undefined) return interaction.editReply({ embeds: [fail('Roblox ne répond pas pour l’instant. Réessaie dans une minute.', '📡 Pas de signal')] });
-      if (!account) return interaction.editReply({ embeds: [fail(`Aucun compte Roblox ne s’appelle **${pseudo}**.\n-# Utilise ton pseudo (@…), pas ton nom d’affichage.`, '🔎 Introuvable')] });
+      if (!account) {
+        return interaction.editReply({ embeds: [fail(paragraphs(
+          `Je ne trouve pas le compte Roblox **${input.replace(/^id:/, '')}**. 🔎`,
+          '• Lance Ocean Quest, puis retape `/lier` : ton pseudo apparaîtra dans la liste\n• Ou écris ton pseudo exact (celui avec le @)',
+        ), '🔎  Introuvable')] });
+      }
 
       const current = await robloxLinks.get(interaction.user.id);
       if (current && String(current.id) === String(account.id)) {
         return interaction.editReply({ embeds: [ok(`Ton compte **${account.name}** est déjà relié et vérifié. ✅`)] });
       }
-      const phrase = Array.from({ length: 4 }, () => pick(WORDS)).join(' ');
-      const entry = { account, phrase, expires: Date.now() + PENDING_MS, headshot: await roblox.headshotUrl(account.id).catch(() => null) };
-      pending.set(interaction.user.id, entry);
-      return interaction.editReply(verifyPayload(entry));
+      pending.delete(interaction.user.id);
+      const request = linkRequests.create({ discordId: interaction.user.id, discordName: interaction.member?.displayName ?? interaction.user.username, account });
+      replies.set(interaction.user.id, interaction);
+      const headshot = await roblox.headshotUrl(account.id).catch(() => null);
+      return interaction.editReply(inGamePayload(request, headshot));
     },
   },
   {
@@ -342,14 +431,28 @@ module.exports = {
   components: {
     rlink: async (interaction, [action]) => {
       if (action === 'verify') return onVerify(interaction);
+      if (action === 'bio') {
+        // Méthode de secours : phrase dans la description Roblox.
+        const request = linkRequests.getFor(interaction.user.id);
+        if (!request) return interaction.update({ embeds: [fail('Cette demande a expiré. Recommence avec `/lier`.')], components: [] });
+        linkRequests.cancelFor(interaction.user.id);
+        replies.delete(interaction.user.id);
+        const phrase = Array.from({ length: 4 }, () => pick(WORDS)).join(' ');
+        const entry = { account: request.account, phrase, expires: Date.now() + PENDING_MS, headshot: await roblox.headshotUrl(request.account.id).catch(() => null) };
+        pending.set(interaction.user.id, entry);
+        return interaction.update(verifyPayload(entry));
+      }
       if (action === 'cancel') {
         pending.delete(interaction.user.id);
+        linkRequests.cancelFor(interaction.user.id);
+        replies.delete(interaction.user.id);
         return interaction.update({ embeds: [ok('Liaison annulée. Tu peux recommencer quand tu veux avec `/lier`.', '👋 Annulé')], components: [] });
       }
       return null;
     },
   },
   async onReady(client, guild) {
+    linkRequests.onResult((status, request) => onGameResult(guild, status, request));
     const every = Math.max(10, config.roblox.rewardSyncMin) * 60 * 1000;
     setInterval(() => syncAll(guild).catch((e) => console.warn('[roblox] récompenses :', e.message)), every).unref();
   },

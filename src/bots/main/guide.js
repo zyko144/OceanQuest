@@ -62,7 +62,7 @@ function guidePayload(guild) {
       oceanEmbed({
         title: '🎮  Ton compte Roblox',
         description: paragraphs(
-          '### `/lier pseudo:TonPseudo`\nRelie ton compte Roblox en 3 étapes. Le bot te guide !\n-# 🎁 Débloque le rôle 🔗 Matelot Roblox et des rôles selon ta progression en jeu.',
+          '### `/lier`\nLance le jeu, tape `/lier` et choisis ton pseudo dans la liste.\nDans le jeu, clique sur l’animal affiché sur Discord : c’est relié ! 🐙\n-# 🎁 Débloque le rôle 🔗 Matelot Roblox et des rôles selon ta progression en jeu.',
           '### `/profil`\nTa fiche de marin : compte Roblox, niveau, doublons et index du jeu.\n-# 👀 Ajoute un membre pour voir sa fiche',
           '### `/jouer`\nLe lien du jeu avec le nombre de joueurs **en direct**.',
         ),

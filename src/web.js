@@ -42,9 +42,9 @@ function startWebServer(registry) {
       });
       return;
     }
-    // Le jeu demande si un joueur a relié son compte Discord (récompense en jeu possible).
+    // Liaison Discord confirmée dans le jeu + « ce joueur est-il relié ? ».
     if (req.url?.startsWith('/roblox/lien/')) {
-      robloxApi.handleLinkStatus(req, res).catch((error) => {
+      robloxApi.handle(req, res).catch((error) => {
         console.error('[roblox] lien', error);
         if (!res.headersSent) res.writeHead(500).end();
       });
