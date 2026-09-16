@@ -207,6 +207,45 @@ const guildConfig = {
       (q) => q.upsert(row, { onConflict: 'guild_id,key' }),
       (rows) => upsertMem(rows, ['guild_id', 'key'], row));
   },
+  remove: (guildId, key) => run('guild_config',
+    (q) => q.delete().eq('guild_id', guildId).eq('key', key),
+    (rows) => {
+      const idx = rows.findIndex((r) => r.guild_id === guildId && r.key === key);
+      if (idx !== -1) rows.splice(idx, 1);
+      return null;
+    }),
+  // Toutes les entrées dont la clé commence par `prefix`, les plus récentes d'abord.
+  list: async (guildId, prefix, limit = 500) => {
+    const rows = await run('guild_config',
+      (q) => q.select('key, value, updated_at').eq('guild_id', guildId).like('key', `${prefix}%`)
+        .order('updated_at', { ascending: false }).limit(limit),
+      (all) => all.filter((r) => r.guild_id === guildId && r.key.startsWith(prefix))
+        .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, limit));
+    return (rows ?? []).filter((r) => r.key.startsWith(prefix));
+  },
 };
 
-module.exports = { init, status, tickets, warnings, modActions, levels, fishers, giveaways, guildConfig };
+// Lectures pour le tableau de bord.
+const reports = {
+  recentTickets: (guildId, limit = 30) => run('tickets',
+    (q) => q.select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(limit),
+    (rows) => rows.filter((r) => r.guild_id === guildId).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, limit)),
+  recentModActions: (guildId, limit = 30) => run('mod_actions',
+    (q) => q.select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(limit),
+    (rows) => rows.filter((r) => r.guild_id === guildId).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, limit)),
+  warningCount: async (guildId) => (await run('warnings',
+    (q) => q.select('id').eq('guild_id', guildId),
+    (rows) => rows.filter((r) => r.guild_id === guildId)))?.length ?? 0,
+  economy: async (guildId) => {
+    const rows = await run('fishers',
+      (q) => q.select('user_id, coins, catches').eq('guild_id', guildId),
+      (all) => all.filter((r) => r.guild_id === guildId));
+    return {
+      fishers: rows?.length ?? 0,
+      coins: (rows ?? []).reduce((sum, r) => sum + (r.coins ?? 0), 0),
+      catches: (rows ?? []).reduce((sum, r) => sum + (r.catches ?? 0), 0),
+    };
+  },
+};
+
+module.exports = { init, status, tickets, warnings, modActions, levels, fishers, giveaways, guildConfig, reports };

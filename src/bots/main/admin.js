@@ -4,12 +4,12 @@ const {
   ChannelType, GatewayIntentBits, LabelBuilder, MessageFlags, ModalBuilder, PermissionFlagsBits: P,
   SlashCommandBuilder, TextInputBuilder, TextInputStyle,
 } = require('discord.js');
-const config = require('../../config');
 const layout = require('../../lib/layout');
 const { findChannel, findRole, isStaff } = require('../../lib/guild');
 const { oceanEmbed, colors, ok, fail } = require('../../lib/embeds');
 const { ephemeral, unix, truncate } = require('../../lib/util');
 const { linkButtons } = require('./welcome');
+const robloxGame = require('../../lib/robloxGame');
 
 const ANNOUNCE_TARGETS = {
   announcements: { label: '📢 Annonces', ping: 'ping_news' },
@@ -20,11 +20,13 @@ const ANNOUNCE_TARGETS = {
 };
 
 const HELP = [
-  ['🎣 Pêche & niveaux', '`/pecher` `/aquarium` `/rang` `/classement`'],
-  ['💡 Communauté', '`/suggestion` `/jouer` `/serveur`'],
+  ['🎣 Pêche & niveaux', '`/pecher` `/aquarium` `/aquariumig` `/rang` `/classement`'],
+  ['🛒 Boutique', '`/boutique` `/inventaire`'],
+  ['🎮 Roblox', '`/lier` `/profil` `/delier` `/jouer`'],
+  ['💡 Communauté', '`/suggestion` `/serveur`'],
   ['🎫 Tickets', '`/ticket fermer` — ou le panneau du salon tickets'],
   ['🛡️ Modération', '`/avertir` `/avertissements` `/sourdine` `/fin-sourdine` `/expulser` `/bannir` `/debannir` `/purge` `/verrouiller` `/deverrouiller` `/lenteur` `/confinement`'],
-  ['⚓ Administration', '`/setup` `/annonce` `/giveaway` `/ticket panneau` `/ticket stats` `/suggestion-statut`'],
+  ['⚓ Administration', '`/tableau-de-bord` `/setup` `/annonce` `/giveaway` `/recompense-roblox` `/ticket panneau` `/ticket stats` `/suggestion-statut`'],
 ];
 
 const commands = [
@@ -103,18 +105,26 @@ const commands = [
   {
     data: new SlashCommandBuilder().setName('jouer').setDescription('🎮 Le lien pour jouer à Ocean Quest sur Roblox'),
     async execute(interaction) {
-      const components = linkButtons();
+      const { info, images } = robloxGame.getStatus();
+      const fr = (n) => Number(n ?? 0).toLocaleString('fr-FR');
       return interaction.reply({
         flags: MessageFlags.Ephemeral,
         embeds: [oceanEmbed({
-          title: '🎮 Prends la mer sur Ocean Quest !',
-          description: config.game.robloxUrl
+          title: '🎮  Prends la mer sur Ocean Quest !',
+          description: robloxGame.gameUrl()
             ? 'Attrape ta canne, choisis ton bateau et pars à la chasse aux poissons légendaires. 🎣'
             : 'Le lien du jeu arrive très bientôt… garde un œil sur les annonces ! 👀',
+          fields: info ? [
+            { name: '🟢 En mer', value: `${fr(info.playing)} joueurs`, inline: true },
+            { name: '👣 Visites', value: fr(info.visits), inline: true },
+            { name: '⭐ Favoris', value: fr(info.favorites), inline: true },
+            { name: '🆕 Dernière mise à jour', value: `<t:${unix(info.updated)}:R>`, inline: true },
+          ] : [],
+          image: images?.thumbnail ?? undefined,
           color: colors.lagoon,
           footer: 'Ocean Quest ・ Roblox',
         })],
-        components,
+        components: linkButtons(),
       });
     },
   },

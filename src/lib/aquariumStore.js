@@ -7,6 +7,8 @@
 const crypto = require('node:crypto');
 const config = require('../config');
 const db = require('./db');
+const robloxGame = require('./robloxGame');
+const robloxLinks = require('./robloxLinks');
 
 const KEY = {
   secret: 'aquarium_ig:secret',
@@ -112,6 +114,9 @@ async function getPlayer(robloxId) {
 }
 
 async function getLink(discordId) {
+  // Un compte vérifié avec /lier passe avant le pseudo simplement mémorisé.
+  const verified = await robloxLinks.get(discordId);
+  if (verified) return verified;
   if (links.has(discordId)) return links.get(discordId);
   const value = await db.guildConfig.get(config.guildId, KEY.link(discordId)).catch(() => null);
   if (value) links.set(discordId, value);
@@ -135,6 +140,8 @@ async function handleHttp(req, res) {
   if (req.method !== 'POST') return reply(res, 405, { erreur: 'POST uniquement' });
   if (!secret) await ensureSecret().catch(() => null);
   if (!sameSecret(req.headers['x-ocean-secret'])) return reply(res, 401, { erreur: 'clé invalide' });
+  // Roblox ajoute l'ID du lieu à chaque requête de ses serveurs : le jeu se configure tout seul.
+  robloxGame.notePlaceId(req.headers['roblox-id']).catch(() => null);
 
   let size = 0;
   const chunks = [];
@@ -154,4 +161,4 @@ async function handleHttp(req, res) {
   }
 }
 
-module.exports = { ensureSecret, normalizePlayer, savePlayers, getPlayer, getLink, setLink, handleHttp };
+module.exports = { ensureSecret, sameSecret, normalizePlayer, savePlayers, getPlayer, getLink, setLink, handleHttp };

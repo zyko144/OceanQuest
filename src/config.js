@@ -42,6 +42,15 @@ module.exports = {
     name: env('GAME_NAME', 'Ocean Quest'),
     robloxUrl: env('ROBLOX_GAME_URL'),
     groupUrl: env('ROBLOX_GROUP_URL'),
+    // ID du lieu Roblox. Vide : lu dans ROBLOX_GAME_URL, sinon détecté quand le jeu contacte le bot.
+    placeId: env('ROBLOX_PLACE_ID'),
+    pollSec: num('ROBLOX_POLL_SEC', 120),
+    pingOnUpdate: bool('ROBLOX_UPDATE_PING', true),
+  },
+
+  roblox: {
+    // Vérification des récompenses (badges, game pass, index) des comptes reliés.
+    rewardSyncMin: num('ROBLOX_REWARD_SYNC_MIN', 30),
   },
 
   tickets: {

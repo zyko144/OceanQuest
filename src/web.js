@@ -4,6 +4,8 @@ const http = require('node:http');
 const config = require('./config');
 const db = require('./lib/db');
 const aquarium = require('./lib/aquariumStore');
+const dashboard = require('./web/dashboard');
+const robloxApi = require('./web/robloxApi');
 
 function snapshot(registry) {
   return {
@@ -32,6 +34,22 @@ main{max-width:560px;padding:32px}h1{margin:0 0 8px}ul{padding-left:18px;line-he
 
 function startWebServer(registry) {
   const server = http.createServer((req, res) => {
+    // Tableau de bord du staff (connexion par /tableau-de-bord sur Discord).
+    if (req.url === '/dashboard' || req.url?.startsWith('/dashboard/') || req.url?.startsWith('/dashboard?')) {
+      dashboard.handle(req, res, registry).catch((error) => {
+        console.error('[dashboard]', error);
+        if (!res.headersSent) res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' }).end('Erreur du tableau de bord');
+      });
+      return;
+    }
+    // Le jeu demande si un joueur a relié son compte Discord (récompense en jeu possible).
+    if (req.url?.startsWith('/roblox/lien/')) {
+      robloxApi.handleLinkStatus(req, res).catch((error) => {
+        console.error('[roblox] lien', error);
+        if (!res.headersSent) res.writeHead(500).end();
+      });
+      return;
+    }
     // Index envoyés par les serveurs du jeu Roblox (/aquariumig).
     if (req.url?.startsWith('/roblox/aquarium')) {
       aquarium.handleHttp(req, res).catch((error) => {

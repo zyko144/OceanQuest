@@ -30,10 +30,39 @@ Les trois bots tournent dans **un seul service Render**.
 ## 🧭 Commandes
 
 - **Pêche & niveaux** : `/pecher` `/aquarium` `/aquariumig` `/rang` `/classement`
-- **Communauté** : `/suggestion` `/jouer` `/serveur` `/aide`
+- **Boutique** : `/boutique` `/inventaire`
+- **Roblox** : `/lier` `/profil` `/delier` `/jouer`
+- **Communauté** : `/suggestion` `/serveur` `/aide`
 - **Tickets** : `/ticket fermer|ajouter|retirer|renommer|panneau|stats`
 - **Modération** : `/avertir` `/avertissements` `/retirer-avertissement` `/effacer-avertissements` `/sourdine` `/fin-sourdine` `/expulser` `/bannir` `/debannir` `/purge` `/verrouiller` `/deverrouiller` `/lenteur` `/confinement`
-- **Administration** : `/setup` `/annonce` `/giveaway lancer|terminer|relancer` `/suggestion-statut`
+- **Administration** : `/tableau-de-bord` `/setup` `/annonce` `/giveaway lancer|terminer|relancer` `/recompense-roblox ajouter|retirer|liste|synchroniser` `/suggestion-statut`
+
+## 🛒 Boutique à doublons
+
+Les doublons gagnés avec `/pecher` s'échangent dans `/boutique` (catalogue dans `src/lib/shop.js`) :
+
+| Catégorie | Objets | Effet |
+| --- | --- | --- |
+| 🎣 Cannes (permanentes) | Renforcée 750 · Capitaine 3 000 · Trident 15 000 | Attente -20 % / -35 % / -50 %, raretés boostées |
+| 🪱 Appâts (par lot) | Vers ×10 · Crevettes ×5 · Abyssaux ×3 | Plus de Rares / ×2 Épiques / ×3 Légendaires et Mythiques |
+| 🥅 Filets ×20 | 300 | Un filet est utilisé seulement s'il évite un déchet |
+| 🎨 Couleurs | Corail, Lagon, Abysses 5 000 · Or 8 000 | Rôle de couleur, choisi dans `/inventaire` |
+
+Inventaires et achats sont rangés dans `guild_config` (`boutique:…`) : aucune table à créer.
+
+## 🎮 Jeu Roblox en direct
+
+- **Détection du jeu** : automatique dès que les serveurs du jeu contactent le bot (en-tête `Roblox-Id` ajouté par Roblox). Sinon `ROBLOX_GAME_URL` ou `ROBLOX_PLACE_ID`.
+- **Joueurs en ligne** : salon vocal `🎮︱ᴇɴ ᴍᴇʀ : N` et statut d'Ocean Quest, mis à jour toutes les 2 min.
+- **Mises à jour** : quand le jeu est republié, annonce dans `#mises-a-jour` avec l'image du jeu et le ping 🆕 Nouvelle Marée.
+- **Liaison vérifiée** (`/lier`) : le joueur colle 4 mots marins dans sa description Roblox, le bot vérifie. Rôle 🔗 Matelot Roblox.
+- **Récompenses** (`/recompense-roblox`) : rôle donné pour un badge, un game pass ou un nombre d'espèces à l'index, revérifié toutes les 30 min.
+- **Récompense en jeu** : `GET /roblox/lien/<robloxId>` (en-tête `X-Ocean-Secret`) répond `{ "relie": true|false }`. Script prêt : [`roblox/LienDiscord.server.lua`](roblox/LienDiscord.server.lua).
+
+## 📊 Tableau de bord
+
+`https://oceanquest.onrender.com/dashboard` : aperçu, tickets, modération, économie et Roblox, en lecture seule.
+Connexion : le staff tape `/tableau-de-bord` et reçoit un lien personnel (5 min, usage unique) qui ouvre une session de 12 h. Le rôle staff est revérifié à chaque visite. Aucun mot de passe à configurer.
 
 ## 🐡 Aquarium IG (`/aquariumig`)
 

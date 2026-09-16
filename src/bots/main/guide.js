@@ -49,6 +49,28 @@ function guidePayload(guild) {
         timestamp: false,
       }),
       oceanEmbed({
+        title: '🛒  La boutique',
+        description: paragraphs(
+          '> Dépense tes 🪙 doublons pour devenir un vrai loup de mer !',
+          '### `/boutique`\nAchète des objets qui t’aident à pêcher :\n🎣 **Cannes** : moins d’attente entre deux lancers\n🪱 **Appâts** : plus de poissons rares\n🥅 **Filets** : fini les vieilles bottes\n🎨 **Couleurs** : un pseudo coloré sur le serveur',
+          '### `/inventaire`\nTes objets, tes appâts restants et le choix de ta couleur.\n-# Les cannes, appâts et filets s’utilisent **tout seuls** quand tu pêches.',
+        ),
+        color: colors.gold,
+        footer: false,
+        timestamp: false,
+      }),
+      oceanEmbed({
+        title: '🎮  Ton compte Roblox',
+        description: paragraphs(
+          '### `/lier pseudo:TonPseudo`\nRelie ton compte Roblox en 3 étapes. Le bot te guide !\n-# 🎁 Débloque le rôle 🔗 Matelot Roblox et des rôles selon ta progression en jeu.',
+          '### `/profil`\nTa fiche de marin : compte Roblox, niveau, doublons et index du jeu.\n-# 👀 Ajoute un membre pour voir sa fiche',
+          '### `/jouer`\nLe lien du jeu avec le nombre de joueurs **en direct**.',
+        ),
+        color: colors.success,
+        footer: false,
+        timestamp: false,
+      }),
+      oceanEmbed({
         title: '🐠  Collection & classements',
         description: paragraphs(
           `### \`/aquarium\`\nTa collection : espèces trouvées (sur ${FISH.length}), nombre de prises, doublons et ta plus belle prise.\n-# 👀 Ajoute un membre pour visiter son aquarium`,
@@ -76,7 +98,6 @@ function guidePayload(guild) {
         title: '🧭  Les autres commandes',
         description: paragraphs(
           `### \`/suggestion\`\nPropose une idée pour le jeu. Elle est publiée dans ${channelMention(guild, 'suggestions', '#suggestions')} et tout le monde peut voter ✅ ❌.`,
-          '### `/jouer`\nLe lien pour jouer à Ocean Quest sur Roblox.',
           '### `/serveur`\nLes infos du serveur : membres, boosts, salons…',
           '### `/aide`\nLa liste rapide de toutes les commandes.',
           `### \`/ticket fermer\`\nFerme ton ticket quand ton problème est réglé.\n-# 🛟 Pour ouvrir un ticket : ${channelMention(guild, 'ticket_panel', '#ouvrir-un-ticket')}`,

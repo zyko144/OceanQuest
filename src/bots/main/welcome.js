@@ -2,6 +2,7 @@
 
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, GatewayIntentBits } = require('discord.js');
 const config = require('../../config');
+const robloxGame = require('../../lib/robloxGame');
 const { findChannel, findRole, channelMention } = require('../../lib/guild');
 const { oceanEmbed, colors, WAVE, paragraphs } = require('../../lib/embeds');
 const { ensurePanel } = require('../../lib/util');
@@ -16,7 +17,8 @@ const GREETINGS = [
 
 function linkButtons() {
   const buttons = [];
-  if (config.game.robloxUrl) buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setURL(config.game.robloxUrl).setLabel('Jouer à Ocean Quest').setEmoji('🎮'));
+  const gameUrl = robloxGame.gameUrl();
+  if (gameUrl) buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setURL(gameUrl).setLabel('Jouer à Ocean Quest').setEmoji('🎮'));
   if (config.game.groupUrl) buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setURL(config.game.groupUrl).setLabel('Groupe Roblox').setEmoji('👥'));
   return buttons.length ? [new ActionRowBuilder().addComponents(buttons)] : [];
 }
@@ -106,7 +108,7 @@ const panels = {
       title: '🔗  Liens utiles',
       description: paragraphs(
         '> Tout ce qu’il te faut pour prendre la mer.',
-        `### 🎮  Jeu Roblox\n${config.game.robloxUrl || 'Bientôt disponible, garde un œil sur les annonces ! 👀'}`,
+        `### 🎮  Jeu Roblox\n${robloxGame.gameUrl() || 'Bientôt disponible, garde un œil sur les annonces ! 👀'}`,
         `### 👥  Groupe Roblox\n${config.game.groupUrl || 'Bientôt disponible !'}`,
         WAVE,
         '-# 🔔 Rejoins le groupe Roblox pour recevoir des bonus exclusifs en jeu.',

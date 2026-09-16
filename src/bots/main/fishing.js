@@ -7,6 +7,7 @@ const { findChannel } = require('../../lib/guild');
 const { oceanEmbed, colors, fail } = require('../../lib/embeds');
 const { ephemeral, sleep, unix } = require('../../lib/util');
 const { levelFromXp } = require('./levels');
+const shop = require('../../lib/shop');
 
 const RARITIES = {
   commun: { label: 'Commun', emoji: '⚪', weight: 55, color: 0x9e9e9e },
@@ -65,11 +66,16 @@ const JUNK = [
 
 const cooldowns = new Map();
 
-function rollCatch(zoneKey) {
+// modifiers : { boost: { rareté: multiplicateur }, hasNet } venant de la boutique.
+function rollCatch(zoneKey, { boost = {}, hasNet = false } = {}) {
   const zone = ZONES[zoneKey];
-  if (Math.random() < 0.06) return { junk: JUNK[Math.floor(Math.random() * JUNK.length)] };
+  let netUsed = false;
+  if (Math.random() < 0.06) {
+    if (!hasNet) return { junk: JUNK[Math.floor(Math.random() * JUNK.length)] };
+    netUsed = true;
+  }
   const available = RARITY_ORDER.filter((r) => FISH.some((f) => f.rarity === r && f.zones.includes(zoneKey)));
-  const weights = available.map((r) => RARITIES[r].weight * (zone.boost[r] ?? 1));
+  const weights = available.map((r) => RARITIES[r].weight * (zone.boost[r] ?? 1) * (boost[r] ?? 1));
   let roll = Math.random() * weights.reduce((a, b) => a + b, 0);
   let rarity = available[0];
   for (const [i, r] of available.entries()) {
@@ -81,7 +87,7 @@ function rollCatch(zoneKey) {
   const ratio = Math.random() ** 2; // les petits spécimens sont plus fréquents
   const weight = +(fish.min + (fish.max - fish.min) * ratio).toFixed(fish.max < 1 ? 3 : 1);
   const coins = Math.round(fish.value * (0.75 + ratio * 0.75));
-  return { fish, weight, coins, ratio };
+  return { fish, weight, coins, ratio, netUsed };
 }
 
 const formatKg = (kg) => (kg >= 1000 ? `${(kg / 1000).toFixed(2)} t` : `${kg} kg`);
@@ -96,8 +102,10 @@ const commands = [
       const zone = ZONES[zoneKey];
       const { guild, user } = interaction;
 
+      const inventory = await shop.getInventory(user.id);
+      const mods = shop.fishingModifiers(inventory);
       const last = cooldowns.get(user.id) ?? 0;
-      const readyAt = last + config.fishing.cooldownSec * 1000;
+      const readyAt = last + config.fishing.cooldownSec * mods.rod.cooldown * 1000;
       if (Date.now() < readyAt) {
         return interaction.reply(ephemeral({ embeds: [fail(`Ta ligne sèche encore… Relance <t:${unix(readyAt)}:R>.`, '⏳ Patience, marin')] }));
       }
@@ -111,7 +119,7 @@ const commands = [
       await interaction.reply({ flags: MessageFlags.Ephemeral, embeds: [oceanEmbed({ description: `🎣 ${user} lance sa ligne vers **${zone.emoji} ${zone.label}**…\n〰〰〰〰〰〰 🪝`, color: colors.foam, footer: 'Ocean Quest ・ Pêche' })] });
       await sleep(1800);
 
-      const result = rollCatch(zoneKey);
+      const result = rollCatch(zoneKey, mods);
       const fisher = await db.fishers.get(guild.id, user.id);
       fisher.catches = (fisher.catches ?? 0) + 1;
 
@@ -119,11 +127,23 @@ const commands = [
         await db.fishers.save(fisher).catch(() => null);
         return interaction.editReply({ embeds: [oceanEmbed({
           title: `${result.junk.emoji} Oups…`,
-          description: `${user} remonte… **${result.junk.name}**. La mer a de l’humour. 🙃`,
+          description: `${user} remonte… **${result.junk.name}**. La mer a de l’humour. 🙃\n-# 🥅 Un filet anti-bottes t’aurait évité ça : \`/boutique\``,
           color: 0x795548,
           footer: 'Ocean Quest ・ Pêche',
         })] });
       }
+
+      // L'appât sert quand un poisson est pris ; le filet seulement s'il a évité un déchet.
+      const gear = [`${mods.rod.emoji} ${mods.rod.name}`];
+      if (mods.bait) {
+        inventory.baits[mods.bait.id] -= 1;
+        gear.push(`${mods.bait.emoji} ${mods.bait.name} (reste ${inventory.baits[mods.bait.id]})`);
+      }
+      if (result.netUsed) {
+        inventory.nets -= 1;
+        gear.push(`🥅 Filet utilisé : bottes évitées ! (reste ${inventory.nets})`);
+      }
+      if (mods.bait || result.netUsed) await shop.saveInventory(user.id, inventory).catch((e) => console.warn('[fishing] inventaire', e.message));
 
       const { fish, weight, coins } = result;
       const rarity = RARITIES[fish.rarity];
@@ -140,7 +160,7 @@ const commands = [
       const badges = [firstTime ? '📖 Nouvelle espèce !' : null, record ? '🏆 Record personnel !' : null].filter(Boolean).join(' ・ ');
       await interaction.editReply({ embeds: [oceanEmbed({
         title: `${fish.emoji} ${fish.name}`,
-        description: `${user} a pêché un **${fish.name}** ${rarity.emoji} *${rarity.label}* !${badges ? `\n${badges}` : ''}`,
+        description: `${user} a pêché un **${fish.name}** ${rarity.emoji} *${rarity.label}* !${badges ? `\n${badges}` : ''}\n-# ${gear.join(' ・ ')}`,
         color: rarity.color,
         fields: [
           { name: 'Poids', value: formatKg(weight), inline: true },

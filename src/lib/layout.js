@@ -26,6 +26,12 @@ const roles = [
   { key: 'builder', name: '🗺️ Cartographe', color: 0xa1887f, hoist: false, permissions: [], about: 'Builder / designer' },
   { key: 'bots', name: '🤖 Équipage Mécanique', color: 0x607d8b, hoist: false, permissions: [], about: 'Bots du serveur' },
 
+  // Couleurs de pseudo achetées dans la /boutique (au-dessus des grades pour que la couleur s'affiche)
+  { key: 'color_coral', name: '🎨 Corail', color: 0xff6f61, hoist: false, shop: true, about: 'Couleur achetée en boutique' },
+  { key: 'color_lagoon', name: '🎨 Lagon', color: 0x1de9b6, hoist: false, shop: true, about: 'Couleur achetée en boutique' },
+  { key: 'color_abyss', name: '🎨 Abysses', color: 0x7c83fd, hoist: false, shop: true, about: 'Couleur achetée en boutique' },
+  { key: 'color_gold', name: '🎨 Or des Pirates', color: 0xffc400, hoist: false, shop: true, about: 'Couleur achetée en boutique' },
+
   // Rôles spéciaux
   { key: 'partner', name: '🤝 Armateur Partenaire', color: 0xffb300, hoist: true, about: 'Partenaire' },
   { key: 'creator', name: '🎥 Sirène des Médias', color: 0xe040fb, hoist: true, about: 'Créateur de contenu' },
@@ -40,6 +46,7 @@ const roles = [
   { key: 'lvl15', name: '🐡 Pêcheur Confirmé', color: 0x29b6f6, hoist: false, level: 15, about: 'Niveau 15' },
   { key: 'lvl5', name: '🐠 Pêcheur Amateur', color: 0x81d4fa, hoist: false, level: 5, about: 'Niveau 5' },
   { key: 'member', name: '🎣 Moussaillon', color: 0xb3e5fc, hoist: false, about: 'Membre vérifié' },
+  { key: 'roblox_linked', name: '🔗 Matelot Roblox', color: 0, hoist: false, about: 'Compte Roblox relié et vérifié (/lier)' },
 
   // Plateformes (auto-rôles)
   { key: 'pc', name: '💻 Marin PC', color: 0, about: 'Joue sur PC' },
@@ -159,6 +166,7 @@ const categories = [
       text('selfroles', '🧭', 'roles', 'announce', { topic: 'Choisis tes notifications et ta plateforme.' }),
       text('links', '🔗', 'liens-utiles', 'announce', { topic: 'Jeu Roblox, groupe et réseaux.' }),
       voice('stats_members', '👥', 'Matelots', 'stat', { dynamic: true }),
+      voice('stats_players', '🎮', 'En mer', 'stat', { dynamic: true }),
     ],
   },
   {

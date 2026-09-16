@@ -3,9 +3,13 @@ module.exports = [
   require('./selfroles'),
   require('./levels'),
   require('./fishing'),
+  require('./shop'),
   require('./aquariumIg'),
+  require('./robloxLink'),
+  require('./robloxStatus'),
   require('./guide'),
   require('./suggestions'),
   require('./giveaways'),
   require('./admin'),
+  require('./dashboardLink'),
 ];

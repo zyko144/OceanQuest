@@ -65,7 +65,11 @@ async function buildServer(guild, { botIds = [], log = console.log } = {}) {
   const myTop = (await guild.members.fetchMe({ force: true })).roles.highest;
   const movable = guild.roles.cache.filter((r) => r.id !== guild.id && r.comparePositionTo(myTop) < 0);
   const planIds = layout.roles.map((r) => roleIds[r.key]);
-  const otherBots = movable.filter((r) => r.managed && r.tags?.botId && botIds.includes(r.tags.botId)).map((r) => r.id);
+  // Tous les rôles de bots restent en haut (même ceux dont on n'a pas le token ici),
+  // sinon ils perdraient le droit de gérer les rôles du plan.
+  const otherBots = movable.filter((r) => r.managed && r.tags?.botId)
+    .sort((a, b) => Number(botIds.includes(a.tags.botId)) - Number(botIds.includes(b.tags.botId)) || a.comparePositionTo(b))
+    .map((r) => r.id);
   const rest = movable.filter((r) => !planIds.includes(r.id) && !otherBots.includes(r.id))
     .sort((a, b) => a.comparePositionTo(b)).map((r) => r.id);
   const bottomToTop = [...rest, ...[...planIds].reverse(), ...otherBots];
