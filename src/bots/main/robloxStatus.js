@@ -27,7 +27,7 @@ async function updatePlayersChannel(guild, status) {
   const def = layout.allChannels().find((c) => c.key === 'stats_players');
   const name = layout.channelName(def, status.info ? fr(status.info.playing) : '—');
   const channel = await ensureLayoutChannel(guild, 'stats_players', { name, after: 'stats_members' });
-  if (channel.name === name || Date.now() - lastRename < RENAME_EVERY_MS) return;
+  if (!channel || channel.name === name || Date.now() - lastRename < RENAME_EVERY_MS) return;
   lastRename = Date.now();
   await channel.setName(name, 'Joueurs en ligne sur Roblox').catch(() => null);
 }

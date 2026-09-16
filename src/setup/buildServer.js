@@ -7,7 +7,7 @@ const {
 } = require('discord.js');
 const layout = require('../lib/layout');
 const { normalizeName } = require('../lib/fonts');
-const { saveStoredIds } = require('../lib/guild');
+const { loadStoredIds, saveStoredIds } = require('../lib/guild');
 
 const REASON = 'Ocean Quest • construction du serveur';
 
@@ -38,12 +38,21 @@ async function buildServer(guild, { botIds = [], log = console.log } = {}) {
   await guild.roles.fetch();
   await guild.channels.fetch();
   const me = await guild.members.fetchMe();
+  // Ce qui a déjà été créé une fois puis supprimé à la main n'est pas recréé.
+  const stored = (await loadStoredIds(guild.id)) ?? { channels: {}, roles: {} };
+  const removedByAdmin = (kind, key) => Boolean(stored[kind]?.[key]) && !guild[kind].cache.has(stored[kind][key]);
 
   // ───── Rôles ─────
   const roleIds = {};
+  const skippedRoles = {};
   for (const def of layout.roles) {
     const target = normalizeName(def.name);
     let role = guild.roles.cache.find((r) => !r.managed && normalizeName(r.name) === target);
+    if (!role && removedByAdmin('roles', def.key)) {
+      report.warnings.push(`Rôle « ${def.name} » supprimé à la main : pas recréé.`);
+      skippedRoles[def.key] = stored.roles[def.key];
+      continue;
+    }
     if (!role) {
       role = await guild.roles.create({
         name: def.name,
@@ -59,34 +68,48 @@ async function buildServer(guild, { botIds = [], log = console.log } = {}) {
     roleIds[def.key] = role.id;
   }
 
-  // Ordre : bot exécutant > autres bots Ocean > rôles du plan > autres rôles.
+  // Ordre : bot exécutant > autres bots > rôles du plan > autres rôles.
   // Un bot ne peut ranger que les rôles situés sous son propre rôle.
-  await guild.roles.fetch();
-  const myTop = (await guild.members.fetchMe({ force: true })).roles.highest;
-  const movable = guild.roles.cache.filter((r) => r.id !== guild.id && r.comparePositionTo(myTop) < 0);
-  const planIds = layout.roles.map((r) => roleIds[r.key]);
-  // Tous les rôles de bots restent en haut (même ceux dont on n'a pas le token ici),
-  // sinon ils perdraient le droit de gérer les rôles du plan.
-  const otherBots = movable.filter((r) => r.managed && r.tags?.botId)
-    .sort((a, b) => Number(botIds.includes(a.tags.botId)) - Number(botIds.includes(b.tags.botId)) || a.comparePositionTo(b))
-    .map((r) => r.id);
-  const rest = movable.filter((r) => !planIds.includes(r.id) && !otherBots.includes(r.id))
-    .sort((a, b) => a.comparePositionTo(b)).map((r) => r.id);
-  const bottomToTop = [...rest, ...[...planIds].reverse(), ...otherBots];
-  if (planIds.some((id) => !movable.has(id)) || myTop.position <= bottomToTop.length) {
-    report.warnings.push(`Rôles non réordonnés : glisse le rôle « ${myTop.name} » tout en haut (Paramètres du serveur > Rôles) puis relance /setup.`);
-  } else {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await guild.roles.fetch();
+    const myTop = (await guild.members.fetchMe({ force: true })).roles.highest;
+    const movable = guild.roles.cache.filter((r) => r.id !== guild.id && r.comparePositionTo(myTop) < 0);
+    const planIds = layout.roles.map((r) => roleIds[r.key]).filter(Boolean);
+    // Tous les rôles de bots restent en haut (même ceux dont on n'a pas le token ici),
+    // sinon ils perdraient le droit de gérer les rôles du plan.
+    const otherBots = movable.filter((r) => r.managed && r.tags?.botId)
+      .sort((a, b) => Number(botIds.includes(a.tags.botId)) - Number(botIds.includes(b.tags.botId)) || a.comparePositionTo(b))
+      .map((r) => r.id);
+    const rest = movable.filter((r) => !planIds.includes(r.id) && !otherBots.includes(r.id))
+      .sort((a, b) => a.comparePositionTo(b)).map((r) => r.id);
+    const bottomToTop = [...rest, ...[...planIds].reverse(), ...otherBots];
+    if (planIds.some((id) => !movable.has(id))) {
+      report.warnings.push(`Rôles non réordonnés : glisse le rôle « ${myTop.name} » tout en haut (Paramètres du serveur > Rôles) puis relance /setup.`);
+      break;
+    }
+    // Les rôles tout juste créés partagent la position 1 : un premier déplacement fait
+    // renuméroter les positions par Discord, puis l'ordre complet peut être appliqué.
+    if (myTop.position <= bottomToTop.length) {
+      if (attempt === 0) {
+        const first = movable.sort((a, b) => b.comparePositionTo(a)).first();
+        if (first) await guild.roles.setPositions([{ role: first.id, position: first.position }]).catch(() => null);
+        continue;
+      }
+      report.warnings.push(`Rôles non réordonnés : glisse le rôle « ${myTop.name} » tout en haut (Paramètres du serveur > Rôles) puis relance /setup.`);
+      break;
+    }
     try {
       await guild.roles.setPositions(bottomToTop.map((id, index) => ({ role: id, position: index + 1 })));
     } catch (error) {
       report.warnings.push(`Ordre des rôles non appliqué : ${error.message}`);
     }
+    break;
   }
 
   // Les bots Ocean reçoivent le rôle 🤖
   for (const botId of [me.id, ...botIds]) {
     const member = await guild.members.fetch(botId).catch(() => null);
-    if (member && !member.roles.cache.has(roleIds.bots)) await member.roles.add(roleIds.bots, REASON).catch(() => null);
+    if (member && roleIds.bots && !member.roles.cache.has(roleIds.bots)) await member.roles.add(roleIds.bots, REASON).catch(() => null);
   }
 
   // ───── Catégories & salons ─────
@@ -95,6 +118,12 @@ async function buildServer(guild, { botIds = [], log = console.log } = {}) {
   for (const catDef of layout.categories) {
     const catTarget = normalizeName(layout.categoryName(catDef));
     let category = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && normalizeName(c.name) === catTarget);
+    if (!category && removedByAdmin('channels', catDef.key)) {
+      report.warnings.push(`Catégorie « ${layout.categoryName(catDef)} » supprimée à la main : pas recréée.`);
+      channelIds[catDef.key] = stored.channels[catDef.key];
+      for (const chDef of catDef.channels) if (stored.channels[chDef.key]) channelIds[chDef.key] = stored.channels[chDef.key];
+      continue;
+    }
     if (!category) {
       category = await guild.channels.create({
         name: layout.categoryName(catDef),
@@ -113,9 +142,14 @@ async function buildServer(guild, { botIds = [], log = console.log } = {}) {
       let channel = guild.channels.cache.find((c) => c.type === chDef.type && (chDef.dynamic
         ? normalizeName(c.name).startsWith(target)
         : normalizeName(c.name) === target));
+      if (!channel && removedByAdmin('channels', chDef.key)) {
+        report.warnings.push(`Salon « ${layout.channelName(chDef, chDef.dynamic ? '…' : undefined)} » supprimé à la main : pas recréé.`);
+        channelIds[chDef.key] = stored.channels[chDef.key];
+        continue;
+      }
       if (!channel) {
         const options = {
-          name: layout.channelName(chDef, chDef.dynamic ? guild.memberCount : undefined),
+          name: layout.channelName(chDef, chDef.dynamic ? (chDef.key === 'stats_members' ? guild.memberCount : '—') : undefined),
           type: chDef.type,
           parent: category.id,
           position: index,
@@ -150,9 +184,9 @@ async function buildServer(guild, { botIds = [], log = console.log } = {}) {
       verificationLevel: Math.max(guild.verificationLevel, GuildVerificationLevel.Medium),
       explicitContentFilter: GuildExplicitContentFilter.AllMembers,
       defaultMessageNotifications: GuildDefaultMessageNotifications.OnlyMentions,
-      afkChannel: channelIds.vc_afk,
+      afkChannel: guild.channels.cache.has(channelIds.vc_afk) ? channelIds.vc_afk : undefined,
       afkTimeout: 900,
-      systemChannel: channelIds.welcome,
+      systemChannel: guild.channels.cache.has(channelIds.welcome) ? channelIds.welcome : undefined,
       systemChannelFlags: [GuildSystemChannelFlags.SuppressJoinNotifications, GuildSystemChannelFlags.SuppressJoinNotificationReplies],
       reason: REASON,
     });
@@ -160,7 +194,7 @@ async function buildServer(guild, { botIds = [], log = console.log } = {}) {
     report.warnings.push(`Réglages du serveur non appliqués : ${error.message}`);
   }
 
-  await saveStoredIds(guild.id, { channels: channelIds, roles: roleIds });
+  await saveStoredIds(guild.id, { channels: channelIds, roles: { ...skippedRoles, ...roleIds } });
   return report;
 }
 
